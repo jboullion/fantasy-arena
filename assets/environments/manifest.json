@@ -1,0 +1,26 @@
+{
+  "source": "Original procedural geometry created in Blender through MCP",
+  "generator": "scripts/create-environment-assets.py",
+  "blender": "5.2.1 LTS",
+  "units": "meters",
+  "up": "+Y",
+  "thirdPartyAssets": false,
+  "assets": [
+    {
+      "name": "tavern",
+      "bytes": 168496,
+      "sha256": "32b1be7231532e70848813b8d07dbd3c101b45ce50fdc81efc77fb3e3179d9c9",
+      "triangles": 1872,
+      "errors": 0,
+      "warnings": 0
+    },
+    {
+      "name": "campfire",
+      "bytes": 211048,
+      "sha256": "35da19c969d96cce170e417a07b860108cfa83604ae865dd056279bd8f487ca8",
+      "triangles": 2048,
+      "errors": 0,
+      "warnings": 0
+    }
+  ]
+}

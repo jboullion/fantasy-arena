@@ -60,6 +60,14 @@ export class ArenaRoom extends Room {
       this.inputs.set(member.actorId, { x: Math.max(-1, Math.min(1, x)), z: Math.max(-1, Math.min(1, z)) });
       this.lastInput.set(member.actorId, performance.now());
     });
+    this.onMessage('retry', client => {
+      if (client.sessionId !== this.hostId || this.stage !== 'lost' || !this.run?.retry()) return;
+      this.stage = 'game';
+      this.simulation.reset(this.run.summary.players, this.round);
+      this.inputs.clear(); this.lastInput.clear(); this.accumulator = 0;
+      this.members.forEach(m => { m.ready = false; });
+      this.publishLobby(); this.broadcast('world', this.snapshot([]));
+    });
     this.onMessage('return', client => {
       if (client.sessionId !== this.hostId || (this.stage !== 'won' && this.stage !== 'lost')) return;
       this.stage = 'lobby'; this.members.forEach(m => { m.ready = false; }); this.inputs.clear();

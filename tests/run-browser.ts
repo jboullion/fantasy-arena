@@ -26,6 +26,9 @@ try {
   const code=(await pages[0].getByTestId('room-code').textContent())!;
   for(const page of pages.slice(1)){await page.getByRole('textbox',{name:'Lobby code'}).fill(code);await page.getByRole('button',{name:'Join lobby',exact:true}).click();await page.getByTestId('room-code').waitFor();}
   const room=matchMaker.getLocalRoomById(code) as ArenaRoom;
+  await pages[0].waitForTimeout(1800);
+  await pages[0].screenshot({path:'test-results/tavern-lobby.png'});
+  assert.equal(await pages[0].getByTestId('tavern-scene').count(),1);
   for(const page of pages){await page.getByRole('button',{name:'Ready up',exact:true}).click();await page.getByRole('button',{name:'Unready',exact:true}).waitFor();}
   await pages[0].getByRole('button',{name:'Launch Level 1'}).click();
   for(let round=1;round<=10;round++) {
@@ -46,6 +49,7 @@ try {
     }
     Object.assign(target,{x:s.players[0].x,z:s.players[0].z+2,hp:30,vx:0,vz:0});
     s.players[0].cooldown=0;s.time=s.config.duration-1.2;
+    if(round===10) { await pages[0].evaluate(()=>{(window as any).combatCanvas=document.querySelector('canvas');}); s.players[3].hp=0; s.spawn(12, 'goblin'); s.enemies.filter(e=>e!==target).forEach((e,i)=>Object.assign(e,{x:-6+(i%4)*3,z:5+Math.floor(i/4)*2})); }
     // Keep boss deadline elapsed; it must be killed to end the round.
     if(round%5===0)s.time=s.config.duration;
     for(const page of pages)await page.getByRole('heading',{name:round===10?'You win!':'Rest. Reforge. Return.'}).waitFor();
@@ -61,6 +65,10 @@ try {
       await pages[1].waitForFunction(()=>document.querySelector('[data-testid="gold"]')?.textContent==='30 gold');
       assert.equal(room.run!.summary.players[0].weaponLevel,1);assert.equal(room.run!.summary.players[1].armorLevel,1);
       await pages[0].screenshot({path:'test-results/shop-round-1.png'});
+      await pages[0].setViewportSize({width:640,height:950});
+      await pages[0].screenshot({path:'test-results/campfire-narrow.png'});
+      assert.equal(await pages[0].evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+      await pages[0].setViewportSize({width:1440,height:1000});
     }
     if(round<10){
       for(const page of pages){await page.getByRole('button',{name:'Ready for next round',exact:true}).click();await page.getByRole('button',{name:'Unready',exact:true}).waitFor();}
@@ -68,8 +76,18 @@ try {
     }
   }
   assert.equal(room.stage,'won');assert.equal(room.run!.summary.result,'won');
-  for(const page of pages){assert.equal(await page.getByRole('button',{name:'Buy Honed longsword'}).isEnabled(),false);assert.equal(await page.getByRole('button',{name:'Buy Forged plate'}).isEnabled(),false);}
+  for(const page of pages) assert.equal(await page.locator('canvas').count(),1);
+  await pages[0].getByRole('button',{name:'View player stats',exact:true}).click();
   const before=JSON.stringify(room.run!.summary);assert.equal(room.run!.buy(room.members[0].actorId,'weapon'),false);assert.equal(JSON.stringify(room.run!.summary),before);
+  await pages[0].waitForTimeout(1500);
+  const victoryPhysics = await pages[0].evaluate(()=>{ const w=(window as any).arena.physics; const bodies:any[]=[]; w.forEachRigidBody((b:any)=>{if(b.userData?.role==='ragdoll') bodies.push(b.translation());}); return bodies; });
+  assert.ok(victoryPhysics.length >= 12 * 8, 'Every surviving enemy becomes an articulated ragdoll');
+  assert.equal(await pages[0].evaluate(()=>(window as any).combatCanvas===document.querySelector('canvas')),true,'Victory retains the combat canvas');
+  const jumpSample = () => pages[0].evaluate(()=>{const ys:number[]=[];(window as any).arena.physics.forEachRigidBody((b:any)=>{if(b.isKinematic())ys.push(b.translation().y);});return ys;});
+  const jumpBefore=await jumpSample(); await pages[0].waitForTimeout(170); const jumpAfter=await jumpSample();
+  assert.equal(jumpAfter.length,4,'All players celebrate, including fallen teammates');
+  assert.ok(jumpAfter.some((y,i)=>Math.abs(y-jumpBefore[i])>.01),'Celebration jumps animate');
+  assert.ok(victoryPhysics.every((p:any)=>Number.isFinite(p.y)));
   await pages[0].screenshot({path:'test-results/run-victory.png'});
   const downloaded=pages[0].waitForEvent('download');await pages[0].getByRole('button',{name:'Export run statistics'}).click();const download=await downloaded;await download.saveAs('test-results/exported-run.json');
   await pages[0].getByRole('button',{name:'Saved runs',exact:true}).click();await pages[0].getByText('Hero 1 · Victory',{exact:true}).waitFor();
@@ -81,9 +99,17 @@ try {
   await pages[0].getByRole('button',{name:'Launch Level 1'}).click();
   await pages[0].waitForFunction(()=>!!document.querySelector('canvas'));
   assert.equal(room.round,1);assert.ok(room.run!.summary.players.every(p=>p.gold===0 && p.weaponLevel===0 && p.stats.totalDamage===0));
+  await pages[0].setViewportSize({width:1440,height:1000});
   room.simulation.players.forEach(p=>p.hp=0);
   for(const page of pages)await page.getByRole('heading',{name:'The party has fallen.'}).waitFor();
-  assert.equal(room.stage,'lost');assert.equal(await pages[0].getByRole('button',{name:'Buy Honed longsword'}).isEnabled(),false);
+  assert.equal(room.stage,'lost');assert.equal(await pages[0].locator('canvas').count(),1);
+  await pages[0].waitForTimeout(1600);
+  await pages[0].screenshot({path:'test-results/run-defeat.png'});
+  await pages[0].getByRole('button',{name:'Retry level 1',exact:true}).click();
+  await pages[0].getByText('Round 1 / 10',{exact:true}).waitFor();
+  assert.equal(room.stage,'game'); assert.ok(room.simulation.players.every(p=>p.hp===p.maxHealth));
+  room.simulation.players.forEach(p=>p.hp=0);
+  await pages[0].getByRole('heading',{name:'The party has fallen.'}).waitFor();
   const finalStored=await pages[0].evaluate(()=>localStorage.getItem('fantasy-arena.run-reports.v1'));
   assert.equal(JSON.parse(finalStored!).length,2);assert.equal(JSON.parse(finalStored!)[1].run.result,'won');
   await pages[0].reload();assert.equal(await pages[0].evaluate(()=>localStorage.getItem('fantasy-arena.run-reports.v1')),finalStored);

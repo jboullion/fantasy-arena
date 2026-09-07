@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { advance, effects, sim, useUI } from './runtime';
 import { DamageNumbers } from './DamageNumbers';
 import { PlayerLabels } from './PlayerLabels';
-import { PlayerModel, ModelHorde, EnemyRagdolls, PhysicsInspection } from './CharacterModels';
+import { PlayerModel, ModelHorde, EnemyRagdolls, VictoryRagdolls, PhysicsInspection } from './CharacterModels';
 
 const dummy = new THREE.Object3D();
 function HitParticles() {
@@ -59,7 +59,7 @@ export function Scene() {
     <CameraAndLoop/><Environment/><HitParticles/><DamageNumbers/><PlayerLabels/>
     <Suspense fallback={null}><Physics paused={sim.phase === 'paused'} timeStep={1 / 60} gravity={[0,-14,0]}>
       <RigidBody type="fixed" colliders={false}><CuboidCollider args={[50,.1,50]} position={[0,-.12,0]}/></RigidBody>
-      {sim.players.map(p=><PlayerModel key={p.id} playerId={p.id}/>)}<ModelHorde/><EnemyRagdolls/><PhysicsInspection/>
+      {sim.players.map(p=><PlayerModel key={p.id} playerId={p.id}/>)}<ModelHorde/><EnemyRagdolls/><VictoryRagdolls/><PhysicsInspection/>
     </Physics></Suspense>
   </Canvas>;
 }

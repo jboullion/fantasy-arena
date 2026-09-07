@@ -4,6 +4,23 @@ import { Simulation } from './index';
 const roster = [{ id: 10000, name: 'Hero', character: 'warrior' as const }];
 const advance = (s: Simulation, seconds: number) => { for(let i=0;i<Math.round(seconds*60);i++)s.stepMultiplayer(1/60,new Map()); };
 describe('ten-round run', () => {
+  it('retries only a failed round, preserving equipment, gold and cumulative attempt stats', () => {
+    const run = new RunProgress('retry', roster), s = new Simulation();
+    expect(run.retry()).toBe(false);
+    s.reset(run.summary.players, 1); run.finish(s.players, true);
+    run.buy(10000, 'weapon'); run.next();
+    s.reset(run.summary.players, 2); s.player.stats.totalDamage = 123;
+    run.finish(s.players, false);
+    expect(run.retry()).toBe(true); expect(run.retry()).toBe(false);
+    expect(run.summary.round).toBe(2); expect(run.summary.roundsCompleted).toBe(1);
+    expect(run.summary.players[0]).toMatchObject({ gold: 20, weaponLevel: 1, stats: { totalDamage: 123 } });
+    s.reset(run.summary.players, 2);
+    expect(s.player.hp).toBe(s.player.maxHealth);
+    expect(run.finish(s.players, true)).toBe(true);
+    expect(run.finish(s.players, true)).toBe(false);
+    expect(run.summary.players[0].gold).toBe(120);
+    expect(run.next()).toBe(true);
+  });
   it('caps equipment ranks and rejects duplicate purchases beyond the cap', () => {
     const run=new RunProgress('run',roster),s=new Simulation();s.reset(roster);run.finish(s.players,true);run.summary.players[0].gold=10000;
     for(let i=0;i<5;i++)expect(run.buy(10000,'weapon')).toBe(true);

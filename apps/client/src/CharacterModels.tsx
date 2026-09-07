@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import type { Actor, Player } from '@arena/game-core';
 import { enemyTypes, type CharacterId, type EnemyType } from '@arena/game-data';
 import data from '../public/models/manifest.json';
+import { useNetwork } from './network';
 import { effects, sim, useUI } from './runtime';
 
 type V3 = [number, number, number];
@@ -32,7 +33,7 @@ function useModel(kind: Kind): Model {
 }
 
 // Shared joint-space walk pose. No animation values enter the combat simulation.
-function pose(model: Model, actor: Actor, matrices: Record<string, THREE.Matrix4>) {
+function pose(model: Model, actor: Actor, matrices: Record<string, THREE.Matrix4>, seated = false) {
   const speed = Math.min(1, Math.hypot(actor.vx, actor.vz) / 3);
   const stride = Math.sin(sim.time * 11 + actor.id) * .43 * speed;
   const player = actor as Player;
@@ -46,6 +47,8 @@ function pose(model: Model, actor: Actor, matrices: Record<string, THREE.Matrix4
     if (name.startsWith('thigh_')) angle = name.endsWith('_l') ? stride : -stride;
     if (name.startsWith('shin_')) angle = Math.max(0, name.endsWith('_l') ? -stride : stride) * .8;
     if (name.startsWith('upper_arm_')) angle = (name.endsWith('_l') ? -stride : stride) * .4;
+    if (seated && name.startsWith('thigh_')) angle = -Math.PI / 2;
+    if (seated && name.startsWith('shin_')) angle = Math.PI / 2;
     if (name === 'upper_arm_r' && actor.windup > 0) angle = -.45;
     matrix.copy(matrices[parent]);
     matrix.multiply(translation.makeTranslation(...minus(anchor, model.definition.parts[parent].position)));
@@ -74,10 +77,11 @@ const Accessories = memo(function Accessories({ model, playerId }: { model: Mode
     return Object.fromEntries(accessories.map(([name, part]) => [name, tuple(new THREE.Vector3(...part.position).applyQuaternion(q).add(new THREE.Vector3(player.x, 0, player.z)))]));
   }, []);
   const quaternion = useMemo(() => new THREE.Quaternion(), []);
-  useFrame(() => {
+  useFrame(({clock}) => {
     const p = sim.players.find(p => p.id === playerId);
     if (!p || !root.current) return;
-    root.current.setNextKinematicTranslation({ x: p.x, y: 0, z: p.z });
+    const jumping = useNetwork.getState().lobby?.stage === 'won';
+    root.current.setNextKinematicTranslation({ x: p.x, y: jumping ? Math.abs(Math.sin(clock.elapsedTime * 5 + p.id)) * .65 : 0, z: p.z });
     root.current.setNextKinematicRotation(quaternion.setFromAxisAngle(axisY, p.facing));
   });
   return <>
@@ -101,12 +105,13 @@ function AlivePlayer({ playerId, model }: { playerId: number; model: Model }) {
   const arc = useRef<THREE.Mesh>(null!);
   const objects = useRef<Record<string, THREE.Mesh>>({});
   const matrices = useMemo(() => ({} as Record<string, THREE.Matrix4>), []);
-  useFrame(() => {
+  useFrame(({clock}) => {
     const p = sim.players.find(p => p.id === playerId); if (!p || !group.current) return;
-    group.current.position.set(p.x, 0, p.z); group.current.rotation.y=p.facing;
-    pose(model, p, matrices);
+    const won = useNetwork.getState().lobby?.stage === 'won';
+    group.current.position.set(p.x, won ? Math.abs(Math.sin(clock.elapsedTime * 5 + p.id)) * .65 : 0, p.z); group.current.rotation.y=p.facing;
+    pose(model, won ? {...p, vx: 0, vz: 0, swing: 0, windup: 0} : p, matrices);
     for (const [name, object] of Object.entries(objects.current)) object.matrix.copy(matrices[name]);
-    arc.current.visible=p.swing>0;
+    arc.current.visible=sim.phase === 'playing' && p.swing>0;
     (arc.current.material as THREE.MeshBasicMaterial).opacity=p.swing/.23*.65;
   });
   return <>
@@ -123,8 +128,9 @@ export function PlayerModel({ playerId }: { playerId: number }) {
   const player=sim.players.find(p=>p.id===playerId);
   const model=useModel(player?.character ?? 'warrior');
   // A departure can arrive after Scene renders but before this child resumes.
+  const won = useNetwork(s => s.lobby?.stage === 'won');
   if (!player) return null;
-  return player.hp<=0 ? <Ragdoll model={model} x={player.x} z={player.z} facing={player.facing} scale={1} seed={player.id}/> : <AlivePlayer key={model.definition.url} model={model} playerId={playerId}/>;
+  return player.hp<=0 && !won ? <Ragdoll model={model} x={player.x} z={player.z} facing={player.facing} scale={1} seed={player.id}/> : <AlivePlayer key={model.definition.url} model={model} playerId={playerId}/>;
 }
 
 export function ModelHorde() {
@@ -134,7 +140,7 @@ export function ModelHorde() {
   const scratch=useMemo(()=>({root:new THREE.Matrix4(),out:new THREE.Matrix4(),q:new THREE.Quaternion(),p:new THREE.Vector3(),s:new THREE.Vector3(),color:new THREE.Color(),poses:[] as Record<string,THREE.Matrix4>[]}),[]);
   useFrame(()=>{
     const {root,out,q,p,s,color,poses}=scratch;
-    const enemies=sim.enemies.slice(0,500);
+    const enemies=useNetwork.getState().lobby?.stage === 'won' ? [] : sim.enemies.slice(0,500);
     for(const mesh of Object.values(instances.current)) mesh.count=enemies.length;
     enemies.forEach((e,i)=>{
       const definition=enemyTypes[e.enemyType??'goblin'], size=definition.scale;
@@ -204,6 +210,28 @@ export function EnemyRagdolls() {
     const type:EnemyType=e.enemyType??'goblin';
     return <Ragdoll key={e.id} model={model} x={e.x} z={e.z} facing={e.facing} scale={enemyTypes[type].scale} seed={e.id} tint={type==='goblin'?'#ffffff':enemyTypes[type].color}/>;
   })}</>;
+}
+
+export function VictoryRagdolls() {
+  const won = useNetwork(s => s.lobby?.stage === 'won');
+  const model = useModel('goblin');
+  return won ? <>{sim.enemies.map(e => <Ragdoll key={e.id} model={model} x={e.x} z={e.z} facing={e.facing} scale={enemyTypes[e.enemyType ?? 'goblin'].scale} seed={e.id} tint={enemyTypes[e.enemyType ?? 'goblin'].color}/>)}</> : null;
+}
+
+export function SocialPlayer({ character, position, facing, seated, seed }: { character: CharacterId; position: V3; facing: number; seated: boolean; seed: number }) {
+  const model = useModel(character);
+  const objects = useRef<Record<string, THREE.Mesh>>({});
+  const group = useRef<THREE.Group>(null!);
+  const matrices = useMemo(() => ({} as Record<string, THREE.Matrix4>), [model]);
+  useFrame(({ clock }) => {
+    const actor = { id: seed, vx: 0, vz: 0, windup: 0, swing: 0 } as Player;
+    pose(model, actor, matrices, seated);
+    group.current.position.y = position[1] + (seated ? -.08 : Math.sin(clock.elapsedTime * 2 + seed) * .015);
+    for (const [name, object] of Object.entries(objects.current)) object.matrix.copy(matrices[name]);
+  });
+  return <group ref={group} position={position} rotation-y={facing} name={`social-player-${seed}`}>
+    {Object.entries(model.meshes).filter(([name]) => !['weapon','shield'].includes(name)).map(([name, mesh]) => <mesh key={name} ref={o => { if (o) objects.current[name] = o; else delete objects.current[name]; }} matrixAutoUpdate={false} geometry={mesh.geometry} material={mesh.material} castShadow/>)}
+  </group>;
 }
 
 export function PhysicsInspection() {

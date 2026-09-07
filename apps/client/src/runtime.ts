@@ -33,7 +33,7 @@ let latest: WorldSnapshot | undefined, receivedRound = -1, sendClock = 0;
 receiveWorld(world => {
   const network = useNetwork.getState();
   const me = network.lobby?.members.find(m => m.sessionId === network.sessionId);
-  const fresh = receivedRound !== world.round;
+  const fresh = receivedRound !== world.round || (world.phase === 'playing' && sim.phase !== 'playing');
   receivedRound = world.round;
   if (fresh) { effects.length = 0; sim.events = []; input.clear(); }
   const oldPlayers = sim.players, oldEnemies = sim.enemies;
@@ -45,14 +45,14 @@ receiveWorld(world => {
   refresh();
 });
 useNetwork.subscribe((state, previous) => {
-  if (state.lobby?.stage !== 'game' && previous.lobby?.stage === 'game') { latest = undefined; receivedRound = -1; effects.length = 0; sim.events = []; input.clear(); }
+  if (state.lobby?.stage === 'lobby' || (state.lobby?.stage === 'shop' && previous.lobby?.stage === 'game')) { latest = undefined; receivedRound = -1; effects.length = 0; sim.events = []; input.clear(); }
 });
 export function advance(delta: number) {
   const actions = input.read();
   if (networked) {
     sendClock += delta;
     if (sendClock >= 1 / 30) {
-      const stopped = useNetwork.getState().menu || document.hidden || sim.player.hp <= 0;
+      const stopped = useNetwork.getState().lobby?.stage !== 'game' || useNetwork.getState().menu || document.hidden || sim.player.hp <= 0;
       send('input', stopped ? { x: 0, z: 0 } : actions); sendClock = 0;
     }
     if (latest) {
@@ -69,7 +69,7 @@ export function advance(delta: number) {
     simMs = performance.now() - start;
   } else accumulator = 0;
   if (sim.phase === 'playing' || networked) {
-    for (const effect of effects) effect.life -= delta;
+    for (const effect of effects) if (!(effect.type === 'kill' && ['won','lost'].includes(useNetwork.getState().lobby?.stage ?? ''))) effect.life -= delta;
     for (let i = effects.length - 1; i >= 0; i--) if (effects[i].life <= 0) effects.splice(i, 1);
   }
   const events = sim.events.splice(0); audio.play(events);

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Vector3 } from 'three';
 import { sim } from './runtime';
-import { networked } from './network';
+import { networked, useNetwork } from './network';
 export function PlayerLabels() {
   const layer = useRef<HTMLDivElement | null>(null), position = useRef(new Vector3());
   useEffect(() => {
@@ -20,7 +20,7 @@ export function PlayerLabels() {
       if (!p) { label.style.display = 'none'; return; }
       position.current.set(p.x, 2.25, p.z).project(camera);
       label.style.display = Math.abs(position.current.z) > 1 ? 'none' : 'block';
-      label.textContent = `${p.name}${p.id === sim.localPlayerId ? ' · YOU' : ''}${p.hp <= 0 ? ' · Fallen' : ''}`;
+      label.textContent = `${p.name}${p.id === sim.localPlayerId ? ' · YOU' : ''}${p.hp <= 0 && useNetwork.getState().lobby?.stage !== 'won' ? ' · Fallen' : ''}`;
       label.className = p.character;
       label.style.transform = `translate(${bounds.left + (position.current.x + 1) * bounds.width / 2}px, ${bounds.top + (1 - position.current.y) * bounds.height / 2}px) translate(-50%, -100%)`;
     });

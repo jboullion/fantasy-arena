@@ -1,3 +1,4 @@
+import { SocialScene } from './SocialScene';
 import { useState } from 'react';
 import { characters, type CharacterId } from '@arena/game-data';
 import { connect, leave, send, useNetwork } from './network';
@@ -14,9 +15,9 @@ export function Lobby() {
   const allReady = !!net.lobby?.members.length && net.lobby.members.every(m => m.ready);
   const profile = (nextName = name, nextCharacter = selected) => { if (me && nextName.trim()) send('profile', { name: nextName, character: nextCharacter }); };
   return <main className="lobby-screen">
-    <div className="lobby-trees" aria-hidden="true">♠</div>
+    <SocialScene character={selected}/>
     <div className="lobby-shell">
-      <header className="lobby-title"><div className="eyebrow">FANTASY ARENA <span>CO-OP PROTOTYPE</span></div><h1>Gather your party.</h1><p>Ten rounds. One clearing. Better together.</p></header>
+      <header className="lobby-title"><div className="eyebrow">FANTASY ARENA <span>CO-OP PROTOTYPE</span></div><h1>Gather your party.</h1><p>Meet at the tavern. Venture out together.</p></header>
       <div className="lobby-layout">
         <section className="lobby-panel character-panel" aria-label="Your adventurer">
           <div className="eyebrow">01 / YOUR ADVENTURER</div>

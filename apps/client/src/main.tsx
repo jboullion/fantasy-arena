@@ -55,12 +55,14 @@ function App() {
     window.addEventListener('pointerdown', audio.unlock);
     return () => { detach(); window.removeEventListener('blur', blur); document.removeEventListener('visibilitychange', visibility); window.removeEventListener('pointerdown', audio.unlock); };
   }, []);
-  if (networked && !showingDeath && net.status === 'connected' && net.lobby && ['shop', 'won', 'lost'].includes(net.lobby.stage)) return <Shop/>;
-  if (networked && !showingDeath && (net.status !== 'connected' || net.lobby?.stage !== 'game')) return <Lobby/>;
+  if (networked && net.status === 'connected' && net.lobby?.stage === 'shop') return <ErrorBoundary><Shop/></ErrorBoundary>;
+  if (networked && (net.status !== 'connected' || !net.lobby || net.lobby.stage === 'lobby')) return <ErrorBoundary><Lobby/></ErrorBoundary>;
+  const ending = networked && (net.lobby?.stage === 'won' || net.lobby?.stage === 'lost');
   const seconds = Math.max(0, Math.ceil(sim.config.duration - sim.time));
   const over = sim.phase === 'dead' || sim.phase === 'complete';
   return <main>
     <ErrorBoundary><Scene/></ErrorBoundary>
+    <div hidden={ending}>
     <div className={`damage-vignette ${sim.player.flash > 0 ? 'active' : ''}`}/>
     <header className="hud">
       <div className="identity"><span className="crest">⚔</span><div><div className="eyebrow">FANTASY ARENA <span>0.1</span></div><h1>The forest trial</h1></div></div>
@@ -77,7 +79,6 @@ function App() {
     {ui.debug && !networked && <DebugPanel/>}
     {networked && sim.player.hp <= 0 && !over && <div className="fallen-message">You have fallen. Your party is still fighting.</div>}
     {networked && net.menu && !over && <div className="scrim"><section className="result" role="dialog" aria-modal="true" aria-label="Game menu"><h2>Your party fights on</h2><p>Multiplayer keeps running while this menu is open.</p><button className="primary" onClick={pause}>Return to game</button><button className="text-button" onClick={leave}>Leave game</button></section></div>}
-    {networked && over && !showingDeath && <div className="scrim"><section className="result" role="dialog" aria-modal="true" aria-label="Round result"><div className="eyebrow">LEVEL 1 · THE FOREST TRIAL</div><h2>{sim.phase === 'complete' ? 'Round complete' : 'Your party has fallen'}</h2><p>{sim.kills} goblins slain · {sim.time.toFixed(1)} seconds survived</p>{net.lobby?.hostId === net.sessionId ? <button className="primary" onClick={() => send('return')}>Back to lobby</button> : <p className="small">Waiting for the host to return the party to the lobby.</p>}<button className="text-button" onClick={leave}>Leave party</button></section></div>}
     {!networked && (over || sim.phase === 'paused') && <div className="scrim"><section className="result" role="dialog" aria-modal="true" aria-label={sim.phase === 'paused' ? 'Paused' : 'Round result'}>
       <div className="eyebrow">THE FOREST TRIAL</div><div className="result-icon">{sim.phase === 'complete' ? '✧' : sim.phase === 'dead' ? '⚔' : 'Ⅱ'}</div>
       <h2>{sim.phase === 'complete' ? 'Round complete' : sim.phase === 'dead' ? 'You died' : 'Take a breath'}</h2>
@@ -86,6 +87,8 @@ function App() {
       <button className="primary" autoFocus onClick={sim.phase === 'paused' ? pause : restart}>{sim.phase === 'paused' ? 'Return to the clearing' : 'Try again'} <span>↵</span></button>
       <p className="small">{ui.device === 'gamepad' ? 'A / Cross to continue' : sim.phase === 'paused' ? 'Esc or Enter to resume' : 'R or Enter to restart'}</p>
     </section></div>}
+    </div>
+    {ending && !showingDeath && <Shop/>}
   </main>;
 }
 createRoot(document.getElementById('root')!).render(<App/>);

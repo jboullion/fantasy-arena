@@ -23,5 +23,10 @@ export class RunProgress {
     if (p[key] >= definition.maxLevel || p.gold < price) return false;
     p.gold -= price; p[key]++; return true;
   }
+  retry() {
+    if (this.summary.result !== 'lost') return false;
+    this.summary.result = 'active'; this.settledRound = this.summary.round - 1;
+    return true;
+  }
   next() { const s = this.summary; if (s.result !== 'active' || this.settledRound !== s.round || s.round >= runRules.rounds) return false; s.round++; return true; }
 }
