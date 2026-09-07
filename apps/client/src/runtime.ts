@@ -73,7 +73,7 @@ export function advance(delta: number) {
     for (let i = effects.length - 1; i >= 0; i--) if (effects[i].life <= 0) effects.splice(i, 1);
   }
   const events = sim.events.splice(0); audio.play(events);
-  for (const event of events) if (event.type === 'kill' || event.type === 'hit') effects.push({ ...event, life: event.type === 'kill' ? 1 : .9, id: effectId++ });
+  for (const event of events) if (event.type === 'kill' || event.type === 'hit') effects.push({ ...event, life: event.type === 'kill' ? 5 : .9, id: effectId++ });
   if (effects.length > 128) effects.splice(0, effects.length - 128);
   hudClock += delta; frameCount++; frameTime += delta;
   if (hudClock >= .1) { useUI.setState(s => ({ revision: s.revision + 1, fps: Math.round(frameCount / frameTime), simulationMs: simMs, device: input.device })); hudClock = 0; }

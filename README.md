@@ -105,7 +105,7 @@ Restart, tuning, heal and clear shortcuts are available in the offline combat la
 
 Units are meters; Y is up; movement uses the XZ plane. The fixed camera faces along negative Z, so W moves toward the top of the screen. Movement and attack facing are independent. The simulation emits events; it never imports React, Three.js, Rapier, or browser APIs.
 
-Rapier is used for presentation corpses, capped at 20 and removed after about a second. Gameplay collisions use circle separation and rectangular bounds to keep this empty arena deterministic. These are rigid-body death reactions, **not articulated ragdolls**. Interior obstacles and production assets remain outside this prototype.
+Blender-authored low-poly models now have articulated Rapier death ragdolls and independent dropped weapons. The warrior has a hinged scabbard and the dwarf has a two-part physics beard. Enemy ragdolls are capped at eight and removed after five seconds; player ragdolls remain until revival or scene exit. Gameplay collisions still use circle separation and rectangular bounds, so cosmetic physics does not change authoritative combat. See `assets/characters/README.md` for the editable Blender source, GLB contract and verification commands.
 
 Multiplayer sends movement inputs rather than client-owned positions or damage. Remote world positions are smoothed on the client; prediction, latency compensation, reconnect/resume, and schema-delta bandwidth optimization are follow-ups. `VITE_MULTIPLAYER_URL` can override the default same-origin proxy endpoint when using separate hosting. Run `npm run dev:server` and `npm run dev:client` separately if needed. The production client build is static; a reachable Node game server and reverse proxy are still required for multiplayer.
 

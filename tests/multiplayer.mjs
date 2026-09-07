@@ -65,14 +65,24 @@ try {
   await host.getByRole('button',{name:'Menu',exact:false}).click(); await host.getByRole('button',{name:'Leave game',exact:true}).click();
   await pages[1].waitForFunction(() => window.arena.sim.players.length === 3);
   await pages[1].screenshot({path:'test-results/multiplayer-after-leave.png'});
-  // The new host carries the remaining party into the inter-round shop.
-  await pages[1].getByRole('heading',{name:'Rest. Reforge. Return.'}).waitFor({timeout:75000});
-  for(const page of pages.slice(1,4)) await page.getByRole('heading',{name:'Rest. Reforge. Return.'}).waitFor();
-  assert.equal(await pages[1].getByRole('button',{name:'Start round 2'}).isEnabled(),false);
+  // An unattended party may win or lose. Both must show the same server outcome.
+  const outcomeHeading = /^(Rest\. Reforge\. Return\.|The party has fallen\.)$/;
+  await pages[1].getByRole('heading',{name:outcomeHeading}).waitFor({timeout:75000});
+  const outcome = await pages[1].getByRole('heading',{name:outcomeHeading}).innerText();
+  for(const page of pages.slice(1,4)) {
+    await page.getByRole('heading',{name:outcome}).waitFor();
+    await page.getByRole('button',{name:'Export run statistics'}).waitFor();
+  }
+  if(outcome === 'Rest. Reforge. Return.') assert.equal(await pages[1].getByRole('button',{name:'Start round 2'}).isEnabled(),false);
+  else {
+    await pages[1].getByRole('button',{name:'Back to lobby'}).click();
+    for(const page of pages.slice(1,4)) await page.getByTestId('room-code').waitFor();
+    assert.equal(await pages[1].getByRole('button',{name:'Launch Level 1'}).isEnabled(),false);
+  }
   await pages[1].setViewportSize({width:640,height:900}); await pages[1].screenshot({path:'test-results/lobby-narrow.png'});
   assert.equal(await pages[1].evaluate(()=>document.documentElement.scrollWidth > innerWidth),false);
   assert.deepEqual(errors,[]);
-  writeFileSync('test-results/multiplayer-report.json',JSON.stringify({code, ids, rosters:rosters[0], movementObserved:observed, sharedKills, errors, checks:'4-player join, capacity, profile, readiness, launch, shared movement/combat, leave/host transfer, shop, narrow layout'},null,2));
+  writeFileSync('test-results/multiplayer-report.json',JSON.stringify({code, ids, rosters:rosters[0], movementObserved:observed, sharedKills, outcome, errors, checks:'4-player join, capacity, profile, readiness, launch, shared movement/combat, leave/host transfer, synchronized outcome, narrow layout'},null,2));
   console.log('Four-browser multiplayer flow passed.');
 } catch(error) {
   console.log('Browser errors:',errors);

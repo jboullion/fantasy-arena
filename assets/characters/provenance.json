@@ -1,0 +1,31 @@
+{
+  "authoring": "Original procedural Blender geometry via Blender MCP",
+  "source": "assets/characters/fantasy-arena-characters.blend",
+  "generator": "scripts/create-character-assets.py",
+  "externalAssets": [],
+  "models": [
+    {
+      "kind": "warrior",
+      "bytes": 175224,
+      "triangles": 1972,
+      "parts": 14,
+      "sha256": "bcd6407a209e4dd438cfb4e11d9f367367dbebe95d94ba805848f4222c02f9c3"
+    },
+    {
+      "kind": "guardian",
+      "bytes": 186468,
+      "triangles": 2100,
+      "parts": 15,
+      "sha256": "e1898d8d6781241fbe60ed710981feb1fc4954bf695d7176465b756fec2359fa"
+    },
+    {
+      "kind": "goblin",
+      "bytes": 140204,
+      "triangles": 1596,
+      "parts": 12,
+      "sha256": "9139456df3902a115d26e2419d75297b90c9677e05399088637d598dabdea3ac"
+    }
+  ],
+  "validation": "Khronos glTF validator: zero errors and warnings for all models",
+  "coordinates": "meters; Y up; +Z forward"
+}

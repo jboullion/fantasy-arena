@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { type Config, defaults } from '@arena/game-data';
 import { Scene } from './Scene';
@@ -39,6 +39,14 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { err
 function App() {
   const ui = useUI();
   const net = useNetwork();
+  const [finishedDeath, setFinishedDeath] = useState(false);
+  useEffect(() => {
+    setFinishedDeath(false);
+    if (net.lobby?.stage !== 'lost') return;
+    const timer = window.setTimeout(() => setFinishedDeath(true), 1600);
+    return () => window.clearTimeout(timer);
+  }, [net.lobby?.stage]);
+  const showingDeath = net.status === 'connected' && net.lobby?.stage === 'lost' && !finishedDeath;
   useEffect(() => {
     const detach = input.mount();
     const blur = () => { if (networked) { input.clear(); send('input', { x: 0, z: 0 }); useNetwork.setState({ menu: true }); } else if (sim.phase === 'playing') { sim.phase = 'paused'; refresh(); } };
@@ -47,8 +55,8 @@ function App() {
     window.addEventListener('pointerdown', audio.unlock);
     return () => { detach(); window.removeEventListener('blur', blur); document.removeEventListener('visibilitychange', visibility); window.removeEventListener('pointerdown', audio.unlock); };
   }, []);
-  if (networked && net.status === 'connected' && net.lobby && ['shop', 'won', 'lost'].includes(net.lobby.stage)) return <Shop/>;
-  if (networked && (net.status !== 'connected' || net.lobby?.stage !== 'game')) return <Lobby/>;
+  if (networked && !showingDeath && net.status === 'connected' && net.lobby && ['shop', 'won', 'lost'].includes(net.lobby.stage)) return <Shop/>;
+  if (networked && !showingDeath && (net.status !== 'connected' || net.lobby?.stage !== 'game')) return <Lobby/>;
   const seconds = Math.max(0, Math.ceil(sim.config.duration - sim.time));
   const over = sim.phase === 'dead' || sim.phase === 'complete';
   return <main>
@@ -69,7 +77,7 @@ function App() {
     {ui.debug && !networked && <DebugPanel/>}
     {networked && sim.player.hp <= 0 && !over && <div className="fallen-message">You have fallen. Your party is still fighting.</div>}
     {networked && net.menu && !over && <div className="scrim"><section className="result" role="dialog" aria-modal="true" aria-label="Game menu"><h2>Your party fights on</h2><p>Multiplayer keeps running while this menu is open.</p><button className="primary" onClick={pause}>Return to game</button><button className="text-button" onClick={leave}>Leave game</button></section></div>}
-    {networked && over && <div className="scrim"><section className="result" role="dialog" aria-modal="true" aria-label="Round result"><div className="eyebrow">LEVEL 1 · THE FOREST TRIAL</div><h2>{sim.phase === 'complete' ? 'Round complete' : 'Your party has fallen'}</h2><p>{sim.kills} goblins slain · {sim.time.toFixed(1)} seconds survived</p>{net.lobby?.hostId === net.sessionId ? <button className="primary" onClick={() => send('return')}>Back to lobby</button> : <p className="small">Waiting for the host to return the party to the lobby.</p>}<button className="text-button" onClick={leave}>Leave party</button></section></div>}
+    {networked && over && !showingDeath && <div className="scrim"><section className="result" role="dialog" aria-modal="true" aria-label="Round result"><div className="eyebrow">LEVEL 1 · THE FOREST TRIAL</div><h2>{sim.phase === 'complete' ? 'Round complete' : 'Your party has fallen'}</h2><p>{sim.kills} goblins slain · {sim.time.toFixed(1)} seconds survived</p>{net.lobby?.hostId === net.sessionId ? <button className="primary" onClick={() => send('return')}>Back to lobby</button> : <p className="small">Waiting for the host to return the party to the lobby.</p>}<button className="text-button" onClick={leave}>Leave party</button></section></div>}
     {!networked && (over || sim.phase === 'paused') && <div className="scrim"><section className="result" role="dialog" aria-modal="true" aria-label={sim.phase === 'paused' ? 'Paused' : 'Round result'}>
       <div className="eyebrow">THE FOREST TRIAL</div><div className="result-icon">{sim.phase === 'complete' ? '✧' : sim.phase === 'dead' ? '⚔' : 'Ⅱ'}</div>
       <h2>{sim.phase === 'complete' ? 'Round complete' : sim.phase === 'dead' ? 'You died' : 'Take a breath'}</h2>
@@ -81,4 +89,3 @@ function App() {
   </main>;
 }
 createRoot(document.getElementById('root')!).render(<App/>);
-

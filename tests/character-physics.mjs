@@ -1,0 +1,51 @@
+import { chromium } from '@playwright/test';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import assert from 'node:assert/strict';
+const installed = `${process.env.LOCALAPPDATA}/ms-playwright/chromium-1228/chrome-win64/chrome.exe`;
+const browser=await chromium.launch({headless:true,...(existsSync(installed)?{executablePath:installed}:{})});
+const page=await browser.newPage({viewport:{width:1440,height:1000}}), errors=[];
+page.on('pageerror',e=>errors.push(e.message));
+mkdirSync('test-results',{recursive:true});
+const sample=()=>page.evaluate(()=>{
+  const w=window.arena.physics, bodies=[];
+  w.forEachRigidBody(b=>bodies.push({handle:b.handle,...b.userData,p:b.translation(),q:b.rotation()}));
+  return {bodies,joints:w.impulseJoints.len()};
+});
+try {
+  await page.goto('http://127.0.0.1:5174/?sandbox=1');
+  await page.waitForFunction(()=>window.arena?.physics);
+  await page.evaluate(()=>{const s=window.arena.sim;s.enemies=[];s.spawnClock=999;s.config.cameraHeight=8;s.config.cameraDistance=7;});
+  await page.waitForTimeout(500);
+  let state=await sample();assert.equal(state.joints,1);assert.equal(state.bodies.filter(b=>b.role==='accessory').length,1);
+  const before=state.bodies.find(b=>b.part==='scabbard').q;
+  await page.keyboard.down('d');await page.waitForTimeout(450);await page.keyboard.up('d');
+  state=await sample();const after=state.bodies.find(b=>b.part==='scabbard').q;
+  assert.ok(Math.abs(before.x-after.x)+Math.abs(before.y-after.y)+Math.abs(before.z-after.z)>.01,'Scabbard responds to motion');
+  await page.screenshot({path:'test-results/warrior-model.png'});
+  await page.evaluate(()=>{const a=window.arena;a.sim.reset([{id:0,name:'Dwarf',character:'guardian'}]);a.sim.enemies=[];a.sim.spawnClock=999;a.useUI.setState(s=>({revision:s.revision+1}));});
+  await page.waitForTimeout(700);state=await sample();assert.equal(state.joints,2);assert.equal(state.bodies.filter(b=>b.role==='accessory').length,2);
+  await page.screenshot({path:'test-results/dwarf-model.png'});
+  await page.evaluate(()=>{window.arena.sim.player.hp=0;window.arena.useUI.setState(s=>({revision:s.revision+1}));});
+  await page.waitForTimeout(900);state=await sample();
+  assert.equal(state.bodies.filter(b=>b.role==='dropped').length,2,'Sword and shield detach');
+  assert.equal(state.joints,12,'Dwarf body and beard remain articulated');
+  assert.ok(state.bodies.every(b=>Object.values(b.p).every(Number.isFinite)),'Finite physics positions');
+  const torso=state.bodies.find(b=>b.part==='torso'),weapon=state.bodies.find(b=>b.part==='weapon');
+  assert.ok(Math.hypot(torso.p.x-weapon.p.x,torso.p.z-weapon.p.z)>1,'Weapon separates from body');
+  assert.ok(torso.p.y<1,'Body falls toward ground');
+  await page.screenshot({path:'test-results/dwarf-ragdoll.png'});
+  const deadState=state;
+  await page.evaluate(()=>{const a=window.arena;a.restart();a.sim.enemies=[];a.sim.spawnClock=999;a.sim.spawn(20);a.sim.killAll();});
+  await page.waitForTimeout(800);state=await sample();
+  assert.equal(state.bodies.filter(b=>b.role==='dropped').length,8,'Enemy ragdolls are capped at eight');
+  assert.ok(state.bodies.length<=100,'Physics body budget');
+  await page.screenshot({path:'test-results/enemy-ragdolls.png'});
+  await page.waitForTimeout(5000);state=await sample();assert.equal(state.joints,1,'Enemy joints cleaned up');assert.equal(state.bodies.length,3,'Enemy bodies cleaned up');
+  await page.evaluate(()=>{const s=window.arena.sim;s.config.playerHealth=99999;s.player.hp=99999;s.config.maxEnemies=200;s.spawn(200);});
+  await page.waitForTimeout(1500);await page.screenshot({path:'test-results/horde-models.png'});
+  const fps=await page.evaluate(()=>window.arena.useUI.getState().fps);
+  assert.deepEqual(errors,[]);
+  writeFileSync('test-results/character-physics.json',JSON.stringify({checks:'moving scabbard, two beard joints, detached weapons, articulated death, enemy cap, cleanup, 200-enemy rendering',deadState,fps,errors},null,2));
+  console.log('Character physics checks passed. 200-enemy sampled FPS:',fps);
+}catch(e){console.log('Browser errors:',errors);console.log(await page.locator('body').innerText());await page.screenshot({path:'test-results/character-physics-failure.png'});throw e;}
+finally{await browser.close();}
