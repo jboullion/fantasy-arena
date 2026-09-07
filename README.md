@@ -55,7 +55,7 @@ The client runs on Netlify and the single Node/Colyseus server runs on Render Fr
 - Server health: https://fantasy-arena-server.onrender.com/health
 
 - **Render:** Node runtime, `npm ci --include=dev` build command, `npm run start:server` start command, `/health` health check, Node `22.12.0`, Free instance. `render.yaml` records these settings for a future Blueprint deployment. The server reads Render's `PORT` automatically.
-- **Netlify:** `netlify.toml` sets `npm run build` and publishes `dist`. Set the build environment variable `VITE_MULTIPLAYER_URL` to the Render service's HTTPS URL (without `/multiplayer`) and redeploy after changing it.
+- **Netlify:** `netlify.toml` sets `npm run build`, publishes `dist`, and records the public `VITE_MULTIPLAYER_URL` for the Render service (without `/multiplayer`). Update that value and redeploy if the server address changes. This URL is public client configuration, not a secret.
 - Keep one game-server instance: active rooms live in its memory. Restarts and deployments end active matches. Browser-saved reports remain available.
 - Render Free sleeps when idle and can take about a minute to wake. If connecting fails, wait and try again. Free hosting has usage limits and is intended here for trial playtests.
 - Verify a deployed server with `ARENA_TEST_SERVER_URL=https://YOUR-SERVICE.onrender.com node tests/server.mjs` (PowerShell: set `$env:ARENA_TEST_SERVER_URL` first). This creates temporary test rooms and checks multiplayer behavior.
