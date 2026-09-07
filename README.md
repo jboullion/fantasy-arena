@@ -51,6 +51,9 @@ Browser scripts use an existing local Chromium installation when available, othe
 
 The client runs on Netlify and the single Node/Colyseus server runs on Render Free. Both services use this repository's root directory so npm can resolve the shared workspaces.
 
+- Play: https://fantasy-arena-test.netlify.app
+- Server health: https://fantasy-arena-server.onrender.com/health
+
 - **Render:** Node runtime, `npm ci --include=dev` build command, `npm run start:server` start command, `/health` health check, Node `22.12.0`, Free instance. `render.yaml` records these settings for a future Blueprint deployment. The server reads Render's `PORT` automatically.
 - **Netlify:** `netlify.toml` sets `npm run build` and publishes `dist`. Set the build environment variable `VITE_MULTIPLAYER_URL` to the Render service's HTTPS URL (without `/multiplayer`) and redeploy after changing it.
 - Keep one game-server instance: active rooms live in its memory. Restarts and deployments end active matches. Browser-saved reports remain available.
