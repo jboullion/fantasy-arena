@@ -14,6 +14,7 @@
     "test:browser": "node tests/browser.mjs",
     "dev:client": "vite --host 0.0.0.0",
     "dev:server": "tsx apps/server/src/main.ts",
+    "start:server": "tsx apps/server/src/main.ts",
     "test:run": "tsx tests/run-browser.ts"
   },
   "dependencies": {

@@ -37,7 +37,7 @@ export async function connect(name: string, character: CharacterId, code?: strin
     if (attempt !== generation) return;
     room = undefined;
     const detail = error instanceof Error ? error.message : String(error);
-    useNetwork.setState({ status: 'offline', error: code ? `Could not join that lobby. Check the code; it may be full, closed, or already playing. (${detail})` : 'Could not reach the game server. Make sure npm run dev is running, then try again.' });
+    useNetwork.setState({ status: 'offline', error: code ? `Could not join that lobby. Check the code; it may be full, closed, or already playing. (${detail})` : 'Could not reach the game server. It may be waking up; wait about a minute, then try again.' });
   }
 }
 export function leave() {

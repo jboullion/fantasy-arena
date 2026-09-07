@@ -47,6 +47,16 @@ node tests/round.mjs
 
 Browser scripts use an existing local Chromium installation when available, otherwise Playwright's installed Chromium. Screenshots and measurements go to ignored `test-results/`.
 
+## Online hosting
+
+The client runs on Netlify and the single Node/Colyseus server runs on Render Free. Both services use this repository's root directory so npm can resolve the shared workspaces.
+
+- **Render:** Node runtime, `npm ci --include=dev` build command, `npm run start:server` start command, `/health` health check, Node `22.12.0`, Free instance. `render.yaml` records these settings for a future Blueprint deployment. The server reads Render's `PORT` automatically.
+- **Netlify:** `netlify.toml` sets `npm run build` and publishes `dist`. Set the build environment variable `VITE_MULTIPLAYER_URL` to the Render service's HTTPS URL (without `/multiplayer`) and redeploy after changing it.
+- Keep one game-server instance: active rooms live in its memory. Restarts and deployments end active matches. Browser-saved reports remain available.
+- Render Free sleeps when idle and can take about a minute to wake. If connecting fails, wait and try again. Free hosting has usage limits and is intended here for trial playtests.
+- Verify a deployed server with `ARENA_TEST_SERVER_URL=https://YOUR-SERVICE.onrender.com node tests/server.mjs` (PowerShell: set `$env:ARENA_TEST_SERVER_URL` first). This creates temporary test rooms and checks multiplayer behavior.
+
 ## Rounds, equipment and statistics
 
 Rounds 3, 6 and 9 introduce Ember Runners, Stone Brutes and Frost Revenants, respectively; earlier types remain in the spawn pool. Rounds 5 and 10 add a Forest Warlord boss with party-scaled health. The arena and 60-second spawn-pressure pattern stay the same. When the timer expires with a boss alive, new spawning stops and the party must finish the boss.

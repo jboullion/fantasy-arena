@@ -1,6 +1,6 @@
 import { Client } from '@colyseus/sdk';
 import assert from 'node:assert/strict';
-const sdk = new Client('http://127.0.0.1:2567');
+const sdk = new Client(process.env.ARENA_TEST_SERVER_URL || 'http://127.0.0.1:2567');
 const rooms = [];
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function until(predicate, label) { for(let i=0;i<100;i++){if(predicate())return;await delay(50);}throw new Error(`Timed out: ${label}`); }
