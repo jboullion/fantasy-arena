@@ -21,6 +21,16 @@ const axisY = new THREE.Vector3(0, 1, 0);
 const minus = (a: V3, b: V3): V3 => [a[0]-b[0], a[1]-b[1], a[2]-b[2]];
 const tuple = (p: THREE.Vector3): V3 => [p.x, p.y, p.z];
 const accessoryLimit = (name: string) => name === 'hat_tip' ? .18 : name === 'beard_tip' ? .12 : .10;
+// Local-space snapshots survive removal of an enemy from the live roster.
+const deathPoses = new Map<string, {url:string; time:number; poses:Record<string,THREE.Matrix4>}>();
+function rememberPose(key:string, model:Model, matrices:Record<string,THREE.Matrix4>) {
+  let entry=deathPoses.get(key);
+  if(!entry || entry.url!==model.definition.url) entry={url:model.definition.url,time:0,poses:{}};
+  entry.time=performance.now();
+  for(const [name,matrix] of Object.entries(matrices)) (entry.poses[name]??=new THREE.Matrix4()).copy(matrix);
+  deathPoses.delete(key);deathPoses.set(key,entry);
+  if(deathPoses.size>600) deathPoses.delete(deathPoses.keys().next().value!);
+}
 
 function useModel(kind: Kind): Model {
   const definition = definitions[(getWeapon(kind)?.model??kind) as Kind];
@@ -74,10 +84,15 @@ function pose(model: Model, actor: Actor, matrices: Record<string, THREE.Matrix4
     let angle = part.role === 'accessory' ? accessoryAngle : 0;
     if (name.startsWith('thigh_')) angle = name.endsWith('_l') ? stride : -stride;
     if (name.startsWith('shin_')) angle = Math.max(0, name.endsWith('_l') ? -stride : stride) * .8;
-    if (name.startsWith('upper_arm_')) angle = (name.endsWith('_l') ? -stride : stride) * .4;
+    if (name.startsWith('upper_arm_')) angle = (name.endsWith('_l') ? -stride : stride) * .95;
+    if (name.startsWith('forearm_')) angle = -.15-Math.abs(stride)*.4;
     if (seated && name.startsWith('thigh_')) angle = -Math.PI / 2;
     if (seated && name.startsWith('shin_')) angle = Math.PI / 2;
-    if (name === 'upper_arm_r' && actor.windup > 0) angle = -.45;
+    const follow = player.swing > 0 ? player.swing/.23 : actor.enemyType && actor.cooldown > 0 ? Math.max(0,1-(sim.config.contactCooldown-actor.cooldown)/.23) : 0;
+    if (!seated && name === 'upper_arm_r') {
+      if(actor.windup > 0) angle=-1.15;
+      else if(follow>0) angle=-1.15+1.8*(1-Math.min(1,follow));
+    }
     if (!seated && player.character && isRanged(player.character) && name === 'upper_arm_r') angle = player.character === 'archer' ? -.65 : -.25;
     if (!seated && player.character === 'archer' && name === 'forearm_l' && (actor.windup > 0 || player.swing > 0)) angle = -1.2;
     matrix.copy(matrices[parent]);
@@ -93,8 +108,8 @@ function Hinge({ a, b, anchorA, anchorB, limits = [-.65, .65], spring = false }:
   useEffect(() => { if (spring) joint.current?.configureMotorPosition(0, 8, 1.5); }, [joint, spring]);
   return null;
 }
-function BallJoint({ a, b, anchorA, anchorB }: { a: RefObject<RapierRigidBody>; b: RefObject<RapierRigidBody>; anchorA: V3; anchorB: V3 }) {
-  useSphericalJoint(a, b, [anchorA, anchorB]);
+function Shoulder({a,b,anchorA,anchorB}:{a:RefObject<RapierRigidBody>;b:RefObject<RapierRigidBody>;anchorA:V3;anchorB:V3}) {
+  useSphericalJoint(a,b,[anchorA,anchorB]);
   return null;
 }
 
@@ -167,6 +182,7 @@ function AlivePlayer({ playerId, model }: { playerId: number; model: Model }) {
     const won = useNetwork.getState().lobby?.stage === 'won';
     group.current.position.set(p.x, won ? Math.abs(Math.sin(clock.elapsedTime * 5 + p.id)) * .65 : 0, p.z); group.current.rotation.y=p.facing;
     pose(model, won ? {...p, vx: 0, vz: 0, swing: 0, windup: 0} : p, matrices);
+    if(p.hp>0) rememberPose(`player:${playerId}`,model,matrices);
     for (const [name, object] of Object.entries(objects.current)) object.matrix.copy(matrices[name]);
     arc.current.visible=sim.phase === 'playing' && p.swing>0 && !isRanged(p.character);
     (arc.current.material as THREE.MeshBasicMaterial).opacity=p.swing/.23*.65;
@@ -188,7 +204,7 @@ export function PlayerModel({ playerId }: { playerId: number }) {
   // A departure can arrive after Scene renders but before this child resumes.
   const won = useNetwork(s => s.lobby?.stage === 'won');
   if (!player) return null;
-  return player.hp<=0 && !won ? <Ragdoll model={model} x={player.x} z={player.z} facing={player.facing} scale={1} seed={player.id}/> : <AlivePlayer key={model.definition.url} model={model} playerId={playerId}/>;
+  return player.hp<=0 && !won ? <Ragdoll poseKey={`player:${playerId}`} model={model} x={player.x} z={player.z} facing={player.facing} scale={1} seed={player.id}/> : <AlivePlayer key={model.definition.url} model={model} playerId={playerId}/>;
 }
 
 export function ModelHorde() {
@@ -235,8 +251,11 @@ function HordeKind({kind}:{kind:EnemyType}) {
         state.velocity += (-35*state.angle-7*state.velocity-forward*.7)*dt;
         state.angle = THREE.MathUtils.clamp(state.angle+state.velocity*dt,-.6,.6);
       }
+      // Enemy vx/vz store knockback only; derive walking speed from rendered displacement.
+      const walking={...e,vx:(e.x-state.x)/Math.max(delta,.001),vz:(e.z-state.z)/Math.max(delta,.001)};
       state.x=e.x;state.z=e.z;springs.current.set(e.id,state);
-      pose(model,e,poses[i]??={},false,state.angle);
+      pose(model,walking,poses[i]??={},false,state.angle);
+      if(e.hp>0) rememberPose(`enemy:${e.id}`,model,poses[i]);
       color.set(e.flash>0?'#fff2cf':e.windup>0?'#ffd39d':'#ffffff');
       for(const [name,mesh] of Object.entries(instances.current)) {
         out.multiplyMatrices(root,poses[i][name]); mesh.setMatrixAt(i,out); mesh.setColorAt(i,color);
@@ -255,19 +274,43 @@ function HordeKind({kind}:{kind:EnemyType}) {
   </>;
 }
 
-const Ragdoll = memo(function Ragdoll({model,x,z,facing,scale,seed,knockbackFacing=facing+Math.PI,tint='#ffffff'}:{model:Model;x:number;z:number;facing:number;scale:number;seed:number;knockbackFacing?:number;tint?:string}) {
+const Ragdoll = memo(function Ragdoll({model,x,z,facing,scale,seed,poseKey,knockbackFacing=facing+Math.PI,tint='#ffffff'}:{model:Model;x:number;z:number;facing:number;scale:number;seed:number;poseKey?:string;knockbackFacing?:number;tint?:string}) {
   // Capture once at death. Subsequent snapshots must not reposition the physics bodies.
   const initial=useMemo(()=>{
-    const q=new THREE.Quaternion().setFromAxisAngle(axisY,facing);
-    return Object.fromEntries(Object.entries(model.definition.parts).map(([name,part])=>[name,tuple(new THREE.Vector3(...part.position).multiplyScalar(scale).applyQuaternion(q).add(new THREE.Vector3(x,.07,z)))]));
+    const root=new THREE.Matrix4().compose(new THREE.Vector3(x,.07,z),new THREE.Quaternion().setFromAxisAngle(axisY,facing),new THREE.Vector3(scale,scale,scale));
+    const saved=poseKey?deathPoses.get(poseKey):undefined;
+    const valid=saved?.url===model.definition.url && performance.now()-saved.time<500;
+    return Object.fromEntries(Object.entries(model.definition.parts).map(([name,part])=>{
+      const matrix=root.clone().multiply(valid?saved.poses[name]:new THREE.Matrix4().makeTranslation(...part.position));
+      const p=new THREE.Vector3(),q=new THREE.Quaternion(),s=new THREE.Vector3();matrix.decompose(p,q,s);
+      const e=new THREE.Euler().setFromQuaternion(q);
+      return [name,{position:tuple(p),rotation:[e.x,e.y,e.z] as V3}];
+    }));
   },[]);
   const refs=useMemo(()=>Object.fromEntries(Object.keys(model.definition.parts).map(name=>[name,createRef<RapierRigidBody>() as RefObject<RapierRigidBody>])),[model]);
   const tags=useMemo(()=>Object.fromEntries(Object.entries(model.definition.parts).map(([name,p])=>[name,{part:name,role:p.role==='weapon'?'dropped':'ragdoll',seed}])),[model,seed]);
   useEffect(()=>{
+    const pushX=Math.sin(knockbackFacing), pushZ=Math.cos(knockbackFacing);
     for(const [name,ref] of Object.entries(refs)) {
       const weapon=model.definition.parts[name].role==='weapon';
       ref.current.setLinvel({x:Math.sin(knockbackFacing)*(weapon?5:2)+(weapon?Math.cos(seed)*2:0),y:weapon?4:1.7,z:Math.cos(knockbackFacing)*(weapon?5:2)},true);
-      ref.current.setAngvel(weapon?{x:3,y:6,z:4}:{x:1.4,y:0,z:.5},true);
+      // Rotate the top toward the impact direction, rather than a fixed world axis.
+      ref.current.setAngvel(weapon?{x:3,y:6,z:4}:{x:pushZ*2.5,y:0,z:-pushX*2.5},true);
+      if(name.startsWith('upper_arm_')||name.startsWith('forearm_')) {
+        const side=name.endsWith('_l')?-1:1;
+        const noise=Math.sin(seed*12.9898+side*78.233+(name.startsWith('forearm_')?19:0))*43758.5453;
+        const variation=noise-Math.floor(noise);
+        const outward=side*(.7+variation*.9), forward=.5+variation*.7;
+        const body=ref.current,mass=body.mass();
+        body.applyImpulse({x:mass*(pushX*forward+Math.cos(facing)*outward),y:mass*(.25+variation*.5),z:mass*(pushZ*forward-Math.sin(facing)*outward)},true);
+      }
+      if(name==='torso'||name==='head') {
+        const body=ref.current, center=body.worldCom();
+        const impulse=body.mass()*(name==='torso'?2.8:1.6);
+        // A shoulder-height hit adds both translation and a backward tipping moment.
+        body.applyImpulseAtPoint({x:pushX*impulse,y:0,z:pushZ*impulse},
+          {x:center.x,y:center.y+(name==='torso'?.24:.06)*scale,z:center.z},true);
+      }
     }
   },[]);
   const material=useMemo(()=>{
@@ -283,25 +326,27 @@ const Ragdoll = memo(function Ragdoll({model,x,z,facing,scale,seed,knockbackFaci
       const center=box.getCenter(new THREE.Vector3()).multiplyScalar(scale);
       const mass=weapon ? .3 : part.role==='accessory' ? .08 : name==='torso' ? 2 : .6;
       return <group key={name}>
-        <RigidBody ref={refs[name]} userData={tags[name]} name={`${weapon?'dropped':'body'}-${name}`} position={initial[name]} rotation={[0,facing,0]} colliders={false} linearDamping={.4} angularDamping={1.5} ccd={weapon}>
-          <CuboidCollider args={[Math.max(.025,half.x),Math.max(.025,half.y),Math.max(.025,half.z)]} position={tuple(center)} mass={mass} friction={.8} restitution={.1} collisionGroups={0x00020001}/>
+        <RigidBody ref={refs[name]} userData={tags[name]} name={`${weapon?'dropped':'body'}-${name}`} position={initial[name].position} rotation={initial[name].rotation} colliders={false} linearDamping={weapon ? .4 : .65} angularDamping={weapon ? 1.5 : name.includes('arm_') ? 2.5 : 4} additionalSolverIterations={4} ccd={weapon}>
+          <CuboidCollider args={[Math.max(.025,half.x),Math.max(.025,half.y),Math.max(.025,half.z)]} position={tuple(center)} mass={mass} friction={.8} restitution={.02} collisionGroups={0x00020001}/>
           <mesh geometry={mesh.geometry} material={material} scale={scale} castShadow/>
         </RigidBody>
-        {part.parent&&part.anchor&&(name.startsWith('shin_')||name.startsWith('forearm_')||part.role==='accessory'
-          ? <Hinge a={refs[part.parent]} b={refs[name]} anchorA={scaleV(minus(part.anchor,model.definition.parts[part.parent].position))} anchorB={scaleV(minus(part.anchor,part.position))} limits={part.role==='accessory'?[-.7,.7]:[-1.8,.25]}/>
-          : <BallJoint a={refs[part.parent]} b={refs[name]} anchorA={scaleV(minus(part.anchor,model.definition.parts[part.parent].position))} anchorB={scaleV(minus(part.anchor,part.position))}/>)}
+        {part.parent&&part.anchor&&(name.startsWith('upper_arm_')
+          ? <Shoulder a={refs[part.parent]} b={refs[name]} anchorA={scaleV(minus(part.anchor,model.definition.parts[part.parent].position))} anchorB={scaleV(minus(part.anchor,part.position))}/>
+          : name.startsWith('shin_')||name.startsWith('forearm_')||part.role==='accessory'
+          ? <Hinge a={refs[part.parent]} b={refs[name]} anchorA={scaleV(minus(part.anchor,model.definition.parts[part.parent].position))} anchorB={scaleV(minus(part.anchor,part.position))} spring limits={part.role==='accessory'?[-.45,.45]:[-1.25,.1]}/>
+          : <Hinge spring limits={name === 'head' ? [-.3,.3] : [-.7,.7]} a={refs[part.parent]} b={refs[name]} anchorA={scaleV(minus(part.anchor,model.definition.parts[part.parent].position))} anchorB={scaleV(minus(part.anchor,part.position))}/>)}
       </group>;
     })}
   </group>;
 });
 
-function EnemyCorpse({type,x,z,facing,seed,knockbackFacing}:{type:EnemyType;x:number;z:number;facing:number;seed:number;knockbackFacing?:number}) {
+function EnemyCorpse({type,x,z,facing,seed,actorId,knockbackFacing}:{type:EnemyType;x:number;z:number;facing:number;seed:number;actorId?:number;knockbackFacing?:number}) {
   const model=useModel(type);
-  return <Ragdoll model={model} x={x} z={z} facing={facing} scale={enemyTypes[type].scale} seed={seed} knockbackFacing={knockbackFacing}/>;
+  return <Ragdoll poseKey={`enemy:${actorId??seed}`} model={model} x={x} z={z} facing={facing} scale={enemyTypes[type].scale} seed={seed} knockbackFacing={knockbackFacing}/>;
 }
 export function EnemyRagdolls() {
   useUI(s=>s.revision);
-  return <>{effects.filter(e=>e.type==='kill').slice(-8).map(e=><EnemyCorpse key={e.id} type={e.enemyType??'goblin'} x={e.x} z={e.z} facing={e.facing} seed={e.id} knockbackFacing={e.knockbackFacing}/>)}</>;
+  return <>{effects.filter(e=>e.type==='kill').slice(-8).map(e=><EnemyCorpse key={e.id} actorId={e.targetId} type={e.enemyType??'goblin'} x={e.x} z={e.z} facing={e.facing} seed={e.id} knockbackFacing={e.knockbackFacing}/>)}</>;
 }
 export function VictoryRagdolls() {
   const won = useNetwork(s => s.lobby?.stage === 'won');
@@ -381,3 +426,6 @@ export function PhysicsInspection() {
   }, [world, scene]);
   return null;
 }
+
+
+

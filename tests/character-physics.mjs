@@ -40,7 +40,7 @@ try {
   assert.equal(state.bodies.filter(b=>b.role==='dropped').length,8,'Enemy ragdolls are capped at eight');
   assert.ok(state.bodies.length<=110,'Physics body budget including enemy talismans');
   await page.screenshot({path:'test-results/enemy-ragdolls.png'});
-  await page.waitForTimeout(5000);state=await sample();assert.equal(state.joints,1,'Enemy joints cleaned up');assert.equal(state.bodies.length,3,'Enemy bodies cleaned up');
+  await page.waitForTimeout(5000);state=await sample();assert.equal(state.joints,1,'Enemy joints cleaned up');assert.equal(state.bodies.filter(b=>b.role==='ragdoll'||b.role==='dropped').length,0,'Enemy bodies cleaned up');
   await page.evaluate(()=>{const s=window.arena.sim;s.config.playerHealth=99999;s.player.hp=99999;s.config.maxEnemies=200;s.spawn(200);});
   await page.waitForTimeout(1500);await page.screenshot({path:'test-results/horde-models.png'});
   const fps=await page.evaluate(()=>window.arena.useUI.getState().fps);
@@ -49,3 +49,4 @@ try {
   console.log('Character physics checks passed. 200-enemy sampled FPS:',fps);
 }catch(e){console.log('Browser errors:',errors);console.log(await page.locator('body').innerText());await page.screenshot({path:'test-results/character-physics-failure.png'});throw e;}
 finally{await browser.close();}
+

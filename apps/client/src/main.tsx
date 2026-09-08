@@ -4,6 +4,8 @@ import { type Config, defaults, runRules, bossEncounter } from '@arena/game-data
 import { Scene } from './Scene';
 import { audio, input, pause, refresh, restart, sim, useUI } from './runtime';
 import './style.css';
+import './image-ui.css';
+import { MenuPreview } from './MenuPreview';
 import { Lobby } from './Lobby';
 import { characters } from '@arena/game-data';
 import { leave, networked, send, useNetwork } from './network';
@@ -91,4 +93,4 @@ function App() {
     {ending && !showingDeath && <Shop/>}
   </main>;
 }
-createRoot(document.getElementById('root')!).render(<App/>);
+createRoot(document.getElementById('root')!).render(new URLSearchParams(location.search).has('ui-preview') ? <MenuPreview/> : <App/>);
