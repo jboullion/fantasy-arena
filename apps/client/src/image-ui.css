@@ -1,0 +1,31 @@
+/* Shared raster skins. Slice coordinates are source pixels; text stays in DOM. */
+:root{--gold:#e0c18a;--muted:#c1c5b6;--panel-image:url('/ui/panel-leather.png');--button-image:url('/ui/button-brass.png')}
+.lobby-screen .lobby-title,.lobby-panel,.result,.debug,.hud,.team-hud,.lobby-footer,.preview-panel{
+  border:20px solid transparent;border-image:var(--panel-image) 110 fill / 20px / 0 stretch;background:none;border-radius:0;box-shadow:0 8px 30px #0005;
+}
+.lobby-screen .lobby-title{padding:9px 10px}.lobby-panel{padding:10px}.lobby-footer{padding:6px}.result{padding:20px}.hud{padding:10px}.team-hud{padding:3px 8px}
+button{min-height:44px;line-height:1.4;border-radius:0;background:#14221e;color:#f6eed9;border-color:#ad9465}
+button.primary{border:12px solid transparent;border-image:var(--button-image) 210 fill / 12px / 0 stretch;background:none;color:#171a12;text-shadow:0 1px #f6d79166;padding:3px 14px;font-weight:700;min-height:48px}
+button.primary:hover:not(:disabled){filter:brightness(1.16);background:none}button.primary:active:not(:disabled){filter:brightness(.88)}button:disabled{opacity:.48}
+/* Secondary actions share a quieter patinated sprite; primary brass stays prominent. */
+button:not(.primary):not(.character-choice){
+  border:10px solid transparent;border-image:url('/ui/button-patina.png') 280 fill / 10px / 0 stretch;
+  background:none;color:#f6eed9;padding:4px 10px;min-height:44px;text-shadow:0 1px 2px #000;font-weight:600;
+}
+button:not(.primary):not(.character-choice):hover:not(:disabled){background:none;filter:brightness(1.22)}
+button:not(.primary):not(.character-choice):active:not(:disabled){filter:brightness(.85)}
+.shop-screen .upgrade-card>div{min-width:0}.shop-screen .upgrade-card button{flex-shrink:0}
+.shop-screen .ready-button[aria-pressed=true]{outline:2px solid #c5dfab;outline-offset:-3px;color:#d9f1be}
+.character-choice{border:10px solid transparent;border-image:var(--panel-image) 110 fill / 10px / 0 stretch;background:none;padding:9px 5px;min-height:82px}
+.character-choice.selected{outline:2px solid var(--gold);outline-offset:-3px;background:none;box-shadow:none}
+.character-choice.selected .character-name:before{content:'✓ ';color:var(--gold)}
+.name-field input,.name-field select{min-height:44px;background:#0b1512;color:#f4efdf;border:1px solid #af9669;padding:10px;border-radius:0;max-width:100%}
+.lobby-title h1{color:#f5e5bf}.lobby-title p,.character-description,.upgrade-card p{color:#c5cabb;font-size:12px}.small{color:#bbc4b6;font-size:11px}
+.text-button{border:0;background:transparent}.lobby-screen{padding: max(20px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left))}
+.lobby-screen .lobby-shell{width:410px}.scene-caption{max-width:calc(100% - 480px)}
+.scrim{overflow:auto;padding:24px}.result{flex-shrink:0;margin:auto}
+.ui-preview{height:100dvh;overflow:auto;background:#101c17}.preview-nav{position:relative;z-index:4;display:flex;flex-wrap:wrap;gap:6px;padding:16px;background:#0c1512ee}.preview-nav button[aria-pressed=true]{outline:2px solid var(--gold)}.preview-nav a{color:var(--gold);align-self:center;padding:10px}
+.preview-stage{position:relative;z-index:2;max-width:460px;margin:32px 28px 32px auto}.preview-panel{padding:18px;display:flex;flex-direction:column;gap:18px}.preview-panel h1{font-size:32px}.preview-panel h2{font-size:21px}.preview-panel p{font-size:13px;line-height:1.7;color:#c5cabb}.preview-panel .primary{margin:0}.preview-panel .character-choices{gap:12px}.preview-panel .character-choice{font-family:Cinzel,Georgia,serif}.preview-panel .report-totals{margin:0}.preview-note{font-size:11px;color:#dac697;padding:14px;background:#102019ed}.preview-row{display:flex;justify-content:space-between;align-items:center;gap:16px;border-bottom:1px solid #ccb47f40;padding:12px 0}.preview-row>span{min-width:0}.preview-row button{flex-shrink:0}
+@media(max-width:650px){.lobby-screen{padding:43dvh 12px 20px}.lobby-screen .lobby-shell{width:100%;max-width:440px}.scene-caption{max-width:90%}.preview-stage{margin:25dvh 12px 24px;max-width:none}.preview-panel{padding:12px}.preview-nav{padding:10px}.preview-nav button{flex:1 0 auto}.lobby-panel{padding:8px}.end-menu .lobby-shell{margin-top:0}}
+@media(max-height:500px) and (min-width:651px){.preview-stage{margin-top:12px}.lobby-screen{padding-top:12px}.end-menu .lobby-shell{margin-top:0}}
+

@@ -173,10 +173,18 @@ export class Simulation {
     e.hp -= damage; e.flash = .18;
     if (impact) { e.windup = 0; e.cooldown = Math.max(e.cooldown, .35); }
     const dx=e.x-p.x, dz=e.z-p.z, distance=Math.max(.01,Math.hypot(dx,dz));
-    if (impact) { e.vx = dx/distance * this.config.knockback; e.vz = dz/distance * this.config.knockback; }
+    let impactFacing = distance > .01 ? Math.atan2(dx, dz) : facing;
+    if (impact) {
+      // Server-seeded lateral impulse: at most 15% sideways, preserving forward push.
+      const nx=Math.sin(impactFacing), nz=Math.cos(impactFacing);
+      const side=this.config.knockback > 0 ? (this.random()*2-1)*.15 : 0;
+      e.vx = (nx+nz*side)*this.config.knockback;
+      e.vz = (nz-nx*side)*this.config.knockback;
+      impactFacing += Math.atan(side);
+    }
     this.emit('hit', e, damage, facing);
     if(element)this.events[this.events.length-1].element=element;
-    if (e.hp <= 0) { this.kills++; p.stats.kills++; this.emit('kill', e, undefined, e.facing); this.events[this.events.length-1].knockbackFacing = impact ? (Math.hypot(dx,dz)>.01 ? Math.atan2(dx,dz) : facing) : e.facing+Math.PI; }
+    if (e.hp <= 0) { this.kills++; p.stats.kills++; this.emit('kill', e, undefined, e.facing); this.events[this.events.length-1].knockbackFacing = impact ? impactFacing : e.facing+Math.PI; }
   }
   private elementalHit(p: Player, e: Actor, damage: number, facing: number, weaponId?: string, element?: Element) {
     if (e.hp <= 0) return;
