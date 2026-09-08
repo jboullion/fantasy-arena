@@ -32,28 +32,28 @@ try {
   assert.equal(await pages[0].getByTestId('tavern-scene').count(),1);
   for(const page of pages){await page.getByRole('button',{name:'Ready up',exact:true}).click();await page.getByRole('button',{name:'Unready',exact:true}).waitFor();}
   await pages[0].getByRole('button',{name:'Launch Level 1'}).click();
-  for(let round=1;round<=10;round++) {
+  for(let round=1;round<=6;round++) {
     await pages[0].waitForFunction(r=>(window as any).arena.sim.roundNumber===r || document.querySelector('.round-banner')?.textContent?.includes(`Round ${r} /`),round);
     assert.equal(room.round,round);assert.equal(room.stage,'game');
     const s=room.simulation;
     const types=[...new Set(s.enemies.map(e=>e.enemyType))];
-    if([3,6,9].includes(round))assert.ok(types.includes(round===3?'runner':round===6?'brute':'revenant'));
-    assert.equal(s.enemies.some(e=>e.enemyType==='boss'),round%5===0);
+    if([2,4,6].includes(round))assert.ok(types.includes(round===2?'runner':round===4?'brute':'revenant'));
+    assert.equal(s.enemies.some(e=>e.enemyType==='boss'),[3,6].includes(round));
     if(round>1){assert.equal(s.players[0].equippedWeapon,'warrior_fire');assert.equal(s.players[1].armorLevel,1);assert.equal(s.players[1].maxHealth,165);}
-    // Run real attacks in short deterministic encounters instead of a ten-minute soak.
+    // Run real attacks in short deterministic encounters instead of a six-minute soak.
     const target=s.enemies.find(e=>e.enemyType==='boss') ?? s.enemies[0];
     s.enemies=[target];s.spawnClock=999;
-    if(round%5===0){
+    if([3,6].includes(round)){
       Object.assign(target,{x:0,z:7});s.time=s.config.duration;
       await wait(200);assert.equal(room.stage,'game');
-      if(round===5)await pages[0].screenshot({path:'test-results/round-5-boss.png'});
+      if(round===3)await pages[0].screenshot({path:'test-results/round-3-mini-boss.png'});
     }
     Object.assign(target,{x:s.players[0].x,z:s.players[0].z+2,hp:30,vx:0,vz:0});
     s.players[0].cooldown=0;s.time=s.config.duration-1.2;
-    if(round===10) { await pages[0].evaluate(()=>{(window as any).combatCanvas=document.querySelector('canvas');}); s.players[3].hp=0; s.spawn(12, 'goblin'); s.enemies.filter(e=>e!==target).forEach((e,i)=>Object.assign(e,{x:-6+(i%4)*3,z:5+Math.floor(i/4)*2})); }
+    if(round===6) { await pages[0].evaluate(()=>{(window as any).combatCanvas=document.querySelector('canvas');}); s.players[3].hp=0; s.spawn(12, 'goblin'); s.enemies.filter(e=>e!==target).forEach((e,i)=>Object.assign(e,{x:-6+(i%4)*3,z:5+Math.floor(i/4)*2})); }
     // Keep boss deadline elapsed; it must be killed to end the round.
-    if(round%5===0)s.time=s.config.duration;
-    for(const page of pages)await page.getByRole('heading',{name:round===10?'You win!':'Rest. Reforge. Return.'}).waitFor();
+    if([3,6].includes(round))s.time=s.config.duration;
+    for(const page of pages)await page.getByRole('heading',{name:round===6?'You win!':'Rest. Reforge. Return.'}).waitFor();
     assert.equal(room.run!.summary.roundsCompleted,round);
     assert.equal(room.run!.summary.players.length,4);
     checks.push({round,types,result:room.stage,damage:room.run!.summary.players.map(p=>p.stats.totalDamage)});
@@ -71,7 +71,7 @@ try {
       assert.equal(await pages[0].evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
       await pages[0].setViewportSize({width:1440,height:1000});
     }
-    if(round<10){
+    if(round<6){
       for(const page of pages){await page.getByRole('button',{name:'Ready for next round',exact:true}).click();await page.getByRole('button',{name:'Unready',exact:true}).waitFor();}
       await pages[0].getByRole('button',{name:`Start round ${round+1}`,exact:true}).click();
     }
@@ -107,7 +107,7 @@ try {
   await pages[0].waitForTimeout(1600);
   await pages[0].screenshot({path:'test-results/run-defeat.png'});
   await pages[0].getByRole('button',{name:'Retry level 1',exact:true}).click();
-  await pages[0].getByText('Round 1 / 10',{exact:true}).waitFor();
+  await pages[0].getByText('Round 1 / 6',{exact:true}).waitFor();
   assert.equal(room.stage,'game'); assert.ok(room.simulation.players.every(p=>p.hp===p.maxHealth));
   room.simulation.players.forEach(p=>p.hp=0);
   await pages[0].getByRole('heading',{name:'The party has fallen.'}).waitFor();
@@ -115,7 +115,7 @@ try {
   assert.equal(JSON.parse(finalStored!).length,2);assert.equal(JSON.parse(finalStored!)[1].run.result,'won');
   await pages[0].reload();assert.equal(await pages[0].evaluate(()=>localStorage.getItem('fantasy-arena.run-reports.v1')),finalStored);
   assert.deepEqual(errors,[]);
-  writeFileSync('test-results/ten-round-report.json',JSON.stringify({checks,errors,mode:'accelerated server fixtures with real combat and browser purchases'},null,2));
-  console.log('Ten-round four-client flow, enemies, bosses, purchases, stats, victory, export and saved persistence passed.');
+  writeFileSync('test-results/six-round-report.json',JSON.stringify({checks,errors,mode:'accelerated server fixtures with real combat and browser purchases'},null,2));
+  console.log('Six-round four-client flow, enemies, bosses, purchases, stats, victory, export and saved persistence passed.');
 } catch(error){console.log(errors);for(let i=0;i<pages.length;i++)await pages[i].screenshot({path:`test-results/run-failure-${i}.png`}).catch(()=>{});throw error;}
 finally{await browser.close();vite.kill();await server.gracefullyShutdown(false);}

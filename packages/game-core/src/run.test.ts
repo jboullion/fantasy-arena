@@ -3,7 +3,7 @@ import { RunProgress } from './run';
 import { Simulation } from './index';
 const roster = [{ id: 10000, name: 'Hero', character: 'warrior' as const }];
 const advance = (s: Simulation, seconds: number) => { for(let i=0;i<Math.round(seconds*60);i++)s.stepMultiplayer(1/60,new Map()); };
-describe('ten-round run', () => {
+describe('six-round run', () => {
   it('retries only a failed round, preserving equipment, gold and cumulative attempt stats', () => {
     const run = new RunProgress('retry', roster), s = new Simulation();
     expect(run.retry()).toBe(false);
@@ -38,21 +38,29 @@ describe('ten-round run', () => {
     run.finish(s.players,true);expect(run.buy(10000,'armor')).toBe(true);run.next();s.reset(run.summary.players,3);
     expect(s.player.maxHealth).toBe(125);expect(s.player.armorLevel).toBe(1);
   });
-  it('wins only after ten clears and rejects further purchases or rounds', () => {
+  it('wins only after six clears and rejects further purchases or rounds', () => {
     const run=new RunProgress('run',roster), s=new Simulation();
-    for(let round=1;round<=10;round++){s.reset(run.summary.players,round);run.finish(s.players,true);expect(run.summary.roundsCompleted).toBe(round);if(round<10){expect(run.summary.result).toBe('active');expect(run.next()).toBe(true);}}
-    expect(run.summary.result).toBe('won');expect(run.next()).toBe(false);expect(run.buy(10000,run.summary.players[0].offers[0]??'weapon')).toBe(false);expect(run.summary.players[0].gold).toBe(1000);
+    for(let round=1;round<=6;round++){s.reset(run.summary.players,round);run.finish(s.players,true);expect(run.summary.roundsCompleted).toBe(round);if(round<6){expect(run.summary.result).toBe('active');expect(run.next()).toBe(true);}}
+    expect(run.summary.result).toBe('won');expect(run.next()).toBe(false);expect(run.buy(10000,run.summary.players[0].offers[0]??'weapon')).toBe(false);expect(run.summary.players[0].gold).toBe(600);
   });
   it('does not pay for failed rounds and preserves final stats', () => {
     const run=new RunProgress('run',roster),s=new Simulation();s.reset(roster);s.player.stats.totalDamage=123;s.player.stats.damageByWeapon['weapon.longsword']=123;
     run.finish(s.players,false);expect(run.summary.result).toBe('lost');expect(run.summary.players[0].gold).toBe(0);expect(run.summary.players[0].stats.totalDamage).toBe(123);expect(run.next()).toBe(false);
   });
-  it('introduces cumulative enemy types at rounds 3, 6, and 9 and bosses at 5 and 10', () => {
+  it('introduces cumulative enemy types at rounds 2, 4, and 6 and bosses at 3 and 6', () => {
     const s=new Simulation();
-    for(let round=1;round<=10;round++){s.reset(roster,round);s.spawn(190);const types=new Set(s.enemies.map(e=>e.enemyType));expect(types.has('runner')).toBe(round>=3);expect(types.has('brute')).toBe(round>=6);expect(types.has('revenant')).toBe(round>=9);expect(types.has('boss')).toBe(round%5===0);}
+    for(let round=1;round<=6;round++){s.reset(roster,round);s.spawn(190);const types=new Set(s.enemies.map(e=>e.enemyType));expect(types.has('runner')).toBe(round>=2);expect(types.has('brute')).toBe(round>=4);expect(types.has('revenant')).toBe(round>=6);expect(types.has('boss')).toBe(round===3 || round===6);}
+  });
+  it('distinguishes mini and major boss health and scales both with party size', () => {
+    const s=new Simulation();
+    for(const [round,hp] of [[3,390],[6,975]]) {
+      s.reset(roster,round);expect(s.enemies.find(e=>e.enemyType==='boss')?.maxHealth).toBe(hp);
+      s.reset([...roster,{...roster[0],id:10001}],round);expect(s.enemies.find(e=>e.enemyType==='boss')?.maxHealth).toBe(hp*1.5);
+    }
+    s.reset(roster,6);expect(s.enemies.some(e=>e.enemyType==='revenant')).toBe(true);
   });
   it('requires the boss to die even after the timer expires', () => {
-    const s=new Simulation();s.reset(roster,5);s.time=59.99;s.stepMultiplayer(1/60,new Map());expect(s.phase).toBe('playing');
+    const s=new Simulation();s.reset(roster,3);s.time=59.99;s.stepMultiplayer(1/60,new Map());expect(s.phase).toBe('playing');
     s.enemies=s.enemies.filter(e=>e.enemyType!=='boss');s.stepMultiplayer(1/60,new Map());expect(s.phase).toBe('complete');
   });
   it('counts effective damage by weapon, excludes overkill, and carries totals without duplication', () => {

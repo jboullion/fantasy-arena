@@ -44,7 +44,7 @@ receiveWorld(world => {
   if (me) sim.localPlayerId = me.actorId;
   sim.projectiles = world.projectiles;
   projectileMotion.receive(world.projectiles, performance.now()/1000, world.players);
-  sim.phase = world.phase; sim.time = world.time; sim.kills = world.kills; sim.config = world.config;
+  sim.phase = world.phase; sim.time = world.time; sim.kills = world.kills; sim.config = world.config; sim.roundNumber = world.round;
   sim.events.push(...world.events); latest = world;
   refresh();
 });

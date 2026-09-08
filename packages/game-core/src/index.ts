@@ -1,6 +1,10 @@
-import { defaults, characters, enemyTypes, isRanged, characterWeapons, getWeapon, type WeaponId, type Element, type EnemyType, type CharacterId, type Config } from '@arena/game-data';
+import { bossEncounter, defaults, characters, enemyTypes, isRanged, characterWeapons, getWeapon, type WeaponId, type Element, type EnemyType, type CharacterId, type Config } from '@arena/game-data';
+import { createTerrain } from './terrain';
+import { stepEnemyAction, type EnemyAI } from './enemyAI';
+export { enemyBehaviors } from './enemyAI';
+export { createTerrain } from './terrain';
 export type Input = { x: number; z: number };
-export type Actor = { id: number; x: number; z: number; hp: number; facing: number; flash: number; vx: number; vz: number; cooldown: number; windup: number; attackTargetId?: number; enemyType?: EnemyType; maxHealth?: number; burn?: { remaining: number; nextTick: number; ownerId: number; weaponId: string }; poisoned?: number; chilled?: number };
+export type Actor = { id: number; x: number; z: number; hp: number; facing: number; flash: number; vx: number; vz: number; cooldown: number; windup: number; attackTargetId?: number; enemyType?: EnemyType; maxHealth?: number; burn?: { remaining: number; nextTick: number; ownerId: number; weaponId: string }; poisoned?: number; chilled?: number; ai?: EnemyAI };
 export type CombatStats = { totalDamage: number; damageByWeapon: Record<string, number>; damageByType?: Record<string,number>; kills: number; damageTaken: number };
 export const emptyStats = (character: CharacterId = 'warrior'): CombatStats => ({ totalDamage: 0, damageByWeapon: { [characterWeapons[character]]: 0 }, damageByType:{physical:0}, kills: 0, damageTaken: 0 });
 export type Player = Actor & { name: string; character: CharacterId; equippedWeapon?: WeaponId; maxHealth: number; swing: number; targetId: number | null; weaponLevel: number; armorLevel: number; stats: CombatStats };
@@ -10,6 +14,9 @@ export type GameEvent = { type: 'swing' | 'shoot' | 'hit' | 'kill' | 'hurt' | 'c
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 export class Simulation {
   config: Config;
+  private terrainKey = '';
+  private terrainCache?: ReturnType<typeof createTerrain>;
+  get terrain() { const key = `${this.config.arenaWidth}:${this.config.arenaLength}`; if (key !== this.terrainKey) { this.terrainCache = createTerrain(this.config.arenaWidth, this.config.arenaLength); this.terrainKey = key; } return this.terrainCache!; }
   players: Player[] = [];
   localPlayerId = 0;
   get player() { return this.players.find(p => p.id === this.localPlayerId) ?? this.players[0]; }
@@ -33,12 +40,39 @@ export class Simulation {
     });
     this.localPlayerId = roster[0].id;
     this.enemies = []; this.projectiles = []; this.events = []; this.phase = 'playing'; this.time = this.kills = this.swing = this.spawnClock = 0; this.targetId = null; this.seed = 42; this.nextId = 1; this.assisted = false;
-    this.spawn(4);
+    this.spawnGoblinPack();
+    this.spawnClock = this.encounterInterval(7.5);
     const introduced = (Object.keys(enemyTypes) as EnemyType[]).find(type => type !== 'goblin' && type !== 'boss' && enemyTypes[type].unlock === roundNumber);
     if (introduced) this.spawn(1, introduced);
-    if (roundNumber % 5 === 0) this.spawn(1, 'boss');
+    if (bossEncounter(roundNumber)) this.spawn(1, 'boss');
   }
   emit(type: GameEvent['type'], actor: Actor, amount?: number, facing = this.player.facing) { this.events.push({ type, x: actor.x, z: actor.z, facing, amount, targetId: actor.id, enemyType: actor.enemyType }); }
+  private encounterInterval(count: number) {
+    return this.config.spawnInterval * count / (this.spawnScale * (1 + this.time / 60) * (1 + Math.floor(this.time / 30)));
+  }
+  /** Atomic packs: never trickle the last 1–4 goblins in when near the cap. */
+  spawnGoblinPack() {
+    const capacity = this.config.maxEnemies - this.enemies.length;
+    if (capacity < 5) return 0;
+    const count = Math.min(capacity, 5 + Math.floor(this.random() * 6));
+    for (let attempt = 0; attempt < 24; attempt++) {
+      const edge = Math.floor(this.random() * 4), horizontal = edge >= 2;
+      const along = (this.random() - .5) * Math.max(0, (horizontal ? this.config.arenaWidth : this.config.arenaLength) - 12);
+      const positions = Array.from({ length: count }, (_, i) => {
+        const tangent = along + (i % 5 - 2) * 1.15;
+        const inward = 1.2 + Math.floor(i / 5) * 1.15;
+        return horizontal ? { x: tangent, z: (edge === 2 ? -1 : 1) * (this.config.arenaLength / 2 - inward) } : { x: (edge === 0 ? -1 : 1) * (this.config.arenaWidth / 2 - inward), z: tangent };
+      });
+      if (positions.some(a => Math.abs(a.x) > this.config.arenaWidth / 2 - .5 || Math.abs(a.z) > this.config.arenaLength / 2 - .5 || this.players.some(p => p.hp > 0 && Math.hypot(a.x-p.x,a.z-p.z) < 8) || this.terrain.obstacles.some(o => Math.hypot(a.x-o.x,a.z-o.z) < o.radius+.5) || this.enemies.some(e => Math.hypot(a.x-e.x,a.z-e.z) < 1))) continue;
+      for (const p of positions) this.addEnemy('goblin', p.x, p.z);
+      return count;
+    }
+    return 0;
+  }
+  private addEnemy(enemyType: EnemyType, x: number, z: number) {
+    const hp = enemyType === 'goblin' ? this.config.enemyHealth : enemyType === 'boss' ? enemyTypes.boss.health * (bossEncounter(this.roundNumber)?.healthMultiplier ?? 1) * (1 + (this.players.length - 1) * .5) : enemyTypes[enemyType].health;
+    this.enemies.push({ id: this.nextId++, x, z, hp, maxHealth: hp, enemyType, facing: 0, flash: 0, vx: 0, vz: 0, cooldown: .7, windup: 0 });
+  }
   spawn(count: number, forcedType?: EnemyType) {
     for (let i = 0; i < count && this.enemies.length < this.config.maxEnemies; i++) {
       let x = 0, z = 0;
@@ -51,11 +85,15 @@ export class Simulation {
       if (this.players.some(p => p.hp > 0 && Math.hypot(x - p.x, z - p.z) < 8)) continue;
       const available = (Object.keys(enemyTypes) as EnemyType[]).filter(type => type !== 'boss' && enemyTypes[type].unlock <= this.roundNumber);
       const enemyType = forcedType ?? available[Math.floor(this.random() * available.length)];
-      const hp = enemyType === 'goblin' ? this.config.enemyHealth : enemyType === 'boss' ? enemyTypes.boss.health * (this.roundNumber === 10 ? 1.5 : 1) * (1 + (this.players.length - 1) * .5) : enemyTypes[enemyType].health;
-      this.enemies.push({ id: this.nextId++, x, z, hp, maxHealth: hp, enemyType, facing: 0, flash: 0, vx: 0, vz: 0, cooldown: .7, windup: 0 });
+      this.addEnemy(enemyType, x, z);
     }
   }
-  bound(a: Actor) { const radius = a.enemyType ? .5 * enemyTypes[a.enemyType].scale : .5; a.x = clamp(a.x, -this.config.arenaWidth / 2 + radius, this.config.arenaWidth / 2 - radius); a.z = clamp(a.z, -this.config.arenaLength / 2 + radius, this.config.arenaLength / 2 - radius); }
+  bound(a: Actor) {
+    const radius = a.enemyType ? .5 * enemyTypes[a.enemyType].scale : .5;
+    a.x = clamp(a.x, -this.config.arenaWidth / 2 + radius, this.config.arenaWidth / 2 - radius); a.z = clamp(a.z, -this.config.arenaLength / 2 + radius, this.config.arenaLength / 2 - radius);
+    for (const o of this.terrain.obstacles) { const dx=a.x-o.x, dz=a.z-o.z, d=Math.hypot(dx,dz), r=radius+o.radius; if(d<r) { a.x=o.x+(d>.0001?dx/d:1)*r; a.z=o.z+(d>.0001?dz/d:0)*r; } }
+  }
+  private move(a: Actor, dx: number, dz: number) { const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.2)); for(let i=0;i<steps;i++){ a.x+=dx/steps; a.z+=dz/steps; this.bound(a); } }
   killAll() { this.assisted = true; for (const e of this.enemies) this.emit('kill', e, undefined, e.facing); this.kills += this.enemies.length; this.enemies = []; }
   step(dt: number, input: Input) {
     this.stepMultiplayer(dt, new Map([[this.player.id, input]]));
@@ -66,7 +104,12 @@ export class Simulation {
     this.time = Math.min(c.duration, this.time + dt);
     if (this.time >= c.duration - 1e-8 && !this.enemies.some(e => e.enemyType === 'boss')) { this.time = c.duration; this.projectiles = []; this.phase = 'complete'; this.emit('complete', this.player); return; }
     this.spawnClock -= dt;
-    if (this.spawnClock <= 0 && this.time < c.duration) { this.spawn(1 + Math.floor(this.time / 30)); this.spawnClock = c.spawnInterval / (this.spawnScale * (1 + this.time / 60)); }
+    if (this.spawnClock <= 0 && this.time < c.duration) {
+      const available = (Object.keys(enemyTypes) as EnemyType[]).filter(type => type !== 'boss' && enemyTypes[type].unlock <= this.roundNumber);
+      const type = available[Math.floor(this.random() * available.length)];
+      if (type === 'goblin') { const count = this.spawnGoblinPack(); this.spawnClock = count ? this.encounterInterval(count) : .5; }
+      else { this.spawn(1, type); this.spawnClock = this.encounterInterval(1); }
+    }
     this.stepStatuses(dt);
     for (const p of this.players) if (p.hp > 0) this.stepPlayer(dt, p, inputs.get(p.id) ?? { x: 0, z: 0 });
     this.stepProjectiles(dt);
@@ -76,7 +119,8 @@ export class Simulation {
   private stepPlayer(dt: number, p: Player, input: Input) {
     const c = this.config;
     const stats = characters[p.character];
-    const speed = p.character === 'warrior' ? c.playerSpeed : stats.speed;
+    p.chilled=Math.max(0,(p.chilled??0)-dt);
+    const speed = (p.character === 'warrior' ? c.playerSpeed : stats.speed) * ((p.chilled??0)>0 ? .65 : 1);
     const ranged = isRanged(p.character);
     const weapon=getWeapon(p.equippedWeapon);
     const baseDamage = p.character === 'guardian' ? stats.damage : c.swordDamage;
@@ -85,7 +129,7 @@ export class Simulation {
     const cooldown = p.character === 'warrior' ? c.swordCooldown : stats.cooldown;
     const length = Math.max(1, Math.hypot(input.x, input.z));
     p.vx = input.x / length * speed; p.vz = input.z / length * speed;
-    p.x += p.vx * dt; p.z += p.vz * dt; this.bound(p);
+    this.move(p, p.vx * dt, p.vz * dt);
     p.flash = Math.max(0, p.flash - dt); p.cooldown -= dt; p.swing = Math.max(0, p.swing - dt);
     let nearest: Actor | undefined; let distance = Infinity;
     for (const e of this.enemies) { const d = Math.hypot(e.x - p.x, e.z - p.z); if (d < distance) { distance = d; nearest = e; } }
@@ -183,6 +227,11 @@ export class Simulation {
     });
     this.enemies = this.enemies.filter(e => e.hp > 0);
   }
+  private hurtPlayer(e: Actor, p: Player, baseDamage: number) {
+    if(p.hp<=0 || p.flash>0)return;
+    const damage=baseDamage<=0?0:Math.max(1,baseDamage*((e.poisoned??0)>0?this.config.poisonDamageMultiplier:1)-p.armorLevel*2);
+    p.stats.damageTaken+=Math.min(p.hp,damage);p.hp=Math.max(0,p.hp-damage);p.flash=.35;this.emit('hurt',p);
+  }
   private stepEnemies(dt: number) {
     const c = this.config;
     for (const e of this.enemies) {
@@ -194,20 +243,31 @@ export class Simulation {
       if (!p) continue;
       let dx = p.x - e.x, dz = p.z - e.z, d = Math.hypot(dx, dz);
       e.facing = Math.atan2(dx, dz); e.flash = Math.max(0, e.flash - dt); e.cooldown -= dt;
+      if(stepEnemyAction(e,p,dt,{players:this.players,move:(actor,x,z)=>this.move(actor,x,z),hurt:(enemy,player,damage)=>this.hurtPlayer(enemy,player,damage),summon:()=>{if(this.time<this.config.duration)this.spawnGoblinPack();},slowMultiplier:c.iceSpeedMultiplier})) {
+        this.move(e,e.vx*dt,e.vz*dt);e.vx*=Math.exp(-10*dt);e.vz*=Math.exp(-10*dt);continue;
+      }
       if (e.windup > 0) {
         e.windup -= dt;
         if (e.windup <= 0) {
           if (d <= contactRange + .25 && p.flash <= 0) {
             const baseDamage = e.enemyType === 'goblin' || !e.enemyType ? c.enemyDamage : definition.damage;
-            const damage = baseDamage <= 0 ? 0 : Math.max(1, baseDamage * ((e.poisoned??0)>0 ? c.poisonDamageMultiplier : 1) - p.armorLevel * 2);
-            p.stats.damageTaken += Math.min(p.hp, damage); p.hp = Math.max(0, p.hp - damage); p.flash = .35; this.emit('hurt', p);
+            this.hurtPlayer(e,p,baseDamage);
           }
           e.cooldown = c.contactCooldown;
         }
       } else if (d < contactRange && e.cooldown <= 0) { e.windup = c.contactWindup; e.attackTargetId = p.id; }
-      const baseSpeed = e.windup > 0 || d < contactRange - .3 ? 0 : e.enemyType === 'goblin' || !e.enemyType ? c.enemySpeed : definition.speed;
+      let baseSpeed = e.windup > 0 || d < contactRange - .3 ? 0 : e.enemyType === 'goblin' || !e.enemyType ? c.enemySpeed : definition.speed;
+      if(e.enemyType==='runner' && d>3) {const side=e.id%2?1:-1, x=dx;dx=dx*.9-dz*.44*side;dz=dz*.9+x*.44*side;}
+      if(e.enemyType==='revenant' && e.windup<=0) {
+        baseSpeed=definition.speed;
+        if(d<5){dx=-dx;dz=-dz;}
+        else if(d<=7){const x=dx;dx=-dz;dz=x;}
+      }
       const speed=baseSpeed*((e.chilled??0)>0 ? c.iceSpeedMultiplier : 1);
-      e.x += (dx / Math.max(.01, d) * speed + e.vx) * dt; e.z += (dz / Math.max(.01, d) * speed + e.vz) * dt;
+      // Pick a stable side of a blocking obstacle and follow its perimeter.
+      const blocking = this.terrain.obstacles.map(o => ({o,t:((o.x-e.x)*dx+(o.z-e.z)*dz)/Math.max(.01,d*d)})).filter(({o,t}) => t>0 && t<1 && Math.hypot(e.x+dx*t-o.x,e.z+dz*t-o.z)<o.radius+.5*definition.scale+.35).sort((a,b)=>a.t-b.t)[0];
+      if(blocking) { const o=blocking.o, r=o.radius+.5*definition.scale+.65, angle=Math.atan2(e.z-o.z,e.x-o.x)+(e.id%2?1:-1)*.65; dx=o.x+Math.cos(angle)*r-e.x; dz=o.z+Math.sin(angle)*r-e.z; d=Math.hypot(dx,dz); }
+      this.move(e, (dx / Math.max(.01, d) * speed + e.vx) * dt, (dz / Math.max(.01, d) * speed + e.vz) * dt);
       e.vx *= Math.exp(-10 * dt); e.vz *= Math.exp(-10 * dt); this.bound(e);
     }
     // Lightweight planar separation; corpses never participate in collision or combat.
@@ -225,5 +285,7 @@ export class Simulation {
       }
       this.bound(a);
     }
+    // Later separation pairs may displace an actor already processed above.
+    for (const enemy of this.enemies) this.bound(enemy);
   }
 }

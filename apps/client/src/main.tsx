@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { type Config, defaults } from '@arena/game-data';
+import { type Config, defaults, runRules, bossEncounter } from '@arena/game-data';
 import { Scene } from './Scene';
 import { audio, input, pause, refresh, restart, sim, useUI } from './runtime';
 import './style.css';
@@ -73,9 +73,9 @@ function App() {
     {networked && <aside className="team-hud" aria-label="Team">{sim.players.map(p => <div key={p.id}><span className={`team-dot ${p.character}`}/><span>{p.name}{p.id === sim.localPlayerId ? ' (you)' : ''}<small>{characters[p.character].name}</small></span><b>{p.hp > 0 ? `${p.hp} HP` : 'Fallen'}</b></div>)}</aside>}
     <nav className="tools" aria-label="Game controls"><button onClick={pause}>{networked ? 'Menu' : sim.phase === 'paused' ? 'Resume' : 'Pause'} <kbd>Esc</kbd></button><button aria-pressed={ui.muted} onClick={() => { audio.muted = !audio.muted; useUI.setState({ muted: audio.muted }); }}>{ui.muted ? 'Sound off' : 'Sound on'}</button>{!networked && <button aria-expanded={ui.debug} onClick={() => useUI.setState({ debug: !ui.debug })}>Tune <kbd>F2</kbd></button>}</nav>
     <div className="controls"><span className="key-cluster">{ui.device === 'gamepad' ? 'LEFT STICK' : 'W A S D'}</span><span>Move <b>·</b> Your weapon attacks automatically</span></div>
-    <div className="slice-label">{networked ? `ROUND ${net.lobby?.round} / 10 · ${sim.players.length} ADVENTURERS · TEAM KILLS` : 'CORE COMBAT SANDBOX'} {sim.assisted && <span>· ASSISTED RUN</span>}</div>
-    {networked && <div className="round-banner">Round {net.lobby?.round} / 10{sim.enemies.some(e => e.enemyType === 'boss') && <span> · Defeat the Forest Warlord{seconds === 0 ? ' to finish the round' : ''}</span>}</div>}
-    {sim.enemies.filter(e => e.enemyType === 'boss').map(boss => <div className="boss-health" key={boss.id}><span>FOREST WARLORD · {boss.hp} / {boss.maxHealth}</span><div><i style={{width:`${boss.hp / (boss.maxHealth || 1) * 100}%`}}/></div></div>)}
+    <div className="slice-label">{networked ? `ROUND ${net.lobby?.round} / ${runRules.rounds} · ${sim.players.length} ADVENTURERS · TEAM KILLS` : 'CORE COMBAT SANDBOX'} {sim.assisted && <span>· ASSISTED RUN</span>}</div>
+    {networked && <div className="round-banner">Round {net.lobby?.round} / {runRules.rounds}{sim.enemies.some(e => e.enemyType === 'boss') && <span> · {bossEncounter(net.lobby?.round ?? 1)?.label}: defeat the Forest Warlord{seconds === 0 ? ' to finish the round' : ''}</span>}</div>}
+    {sim.enemies.filter(e => e.enemyType === 'boss').map(boss => <div className="boss-health" key={boss.id}><span>{bossEncounter(sim.roundNumber)?.label.toUpperCase() ?? 'BOSS'} · FOREST WARLORD · {boss.hp} / {boss.maxHealth}</span><div><i style={{width:`${boss.hp / (boss.maxHealth || 1) * 100}%`}}/></div></div>)}
     {ui.debug && !networked && <DebugPanel/>}
     {networked && sim.player.hp <= 0 && !over && <div className="fallen-message">You have fallen. Your party is still fighting.</div>}
     {networked && net.menu && !over && <div className="scrim"><section className="result" role="dialog" aria-modal="true" aria-label="Game menu"><h2>Your party fights on</h2><p>Multiplayer keeps running while this menu is open.</p><button className="primary" onClick={pause}>Return to game</button><button className="text-button" onClick={leave}>Leave game</button></section></div>}

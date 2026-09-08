@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const children = [
-  spawn(process.execPath, [require.resolve('tsx/cli'), 'apps/server/src/main.ts'], { stdio: 'inherit', windowsHide: true }),
+  spawn(process.execPath, [require.resolve('tsx/cli'), 'watch', 'apps/server/src/main.ts'], { stdio: 'inherit', windowsHide: true }),
   spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '0.0.0.0'], { stdio: 'inherit', windowsHide: true }),
 ];
 let closing = false;

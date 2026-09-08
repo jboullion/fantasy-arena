@@ -45,7 +45,7 @@ try {
   assert.equal(await pages[0].getByTestId('tavern-scene').count(),1);
   for(const page of pages){await page.getByRole('button',{name:'Ready up',exact:true}).click();await page.getByRole('button',{name:'Unready',exact:true}).waitFor();}
   await pages[0].getByRole('button',{name:'Launch Level 1'}).click();
-  await pages[0].getByText('Round 1 / 10',{exact:true}).waitFor();
+  await pages[0].getByText('Round 1 / 6',{exact:true}).waitFor();
   room.simulation.enemies=[];room.simulation.spawnClock=999;room.simulation.time=room.simulation.config.duration;
   await pages[0].getByRole('heading',{name:'Rest. Reforge. Return.'}).waitFor();await pages[0].waitForTimeout(800);
   await pages[0].evaluate(async()=>{const {_roots}=await import('/node_modules/.vite/deps/@react-three_fiber.js');const scene=_roots.get(document.querySelector('canvas')).store.getState().scene;(window as any).loadingScene=scene;(window as any).loadingCanvas=document.querySelector('canvas');(window as any).keptEnvironment=scene.getObjectByName('Clearing002');});
