@@ -1,10 +1,10 @@
 {
-  "version": 1,
+  "version": 2,
   "units": "meters",
   "forward": "+Z",
   "models": {
     "warrior": {
-      "url": "/models/warrior.glb",
+      "url": "/models/roster/warrior.glb",
       "parts": {
         "pelvis": {
           "position": [
@@ -257,7 +257,7 @@
       }
     },
     "guardian": {
-      "url": "/models/guardian.glb",
+      "url": "/models/roster/guardian.glb",
       "parts": {
         "pelvis": {
           "position": [
@@ -475,19 +475,6 @@
           ],
           "role": "weapon"
         },
-        "shield": {
-          "position": [
-            -0.52,
-            0.6499999999999999,
-            0.22
-          ],
-          "halfExtents": [
-            0.27,
-            0.33,
-            0.065
-          ],
-          "role": "weapon"
-        },
         "beard_upper": {
           "position": [
             0,
@@ -528,8 +515,488 @@
         }
       }
     },
+    "archer": {
+      "url": "/models/roster/archer.glb",
+      "parts": {
+        "pelvis": {
+          "position": [
+            0,
+            0.77,
+            0
+          ],
+          "halfExtents": [
+            0.26789999999999997,
+            0.15,
+            0.2
+          ],
+          "role": "body"
+        },
+        "torso": {
+          "position": [
+            0,
+            1.11,
+            0
+          ],
+          "halfExtents": [
+            0.285,
+            0.21,
+            0.22
+          ],
+          "role": "body",
+          "parent": "pelvis",
+          "anchor": [
+            0,
+            0.9400000000000001,
+            0
+          ]
+        },
+        "head": {
+          "position": [
+            0,
+            1.62,
+            0
+          ],
+          "halfExtents": [
+            0.24,
+            0.24,
+            0.23
+          ],
+          "role": "body",
+          "parent": "torso",
+          "anchor": [
+            0,
+            1.3800000000000001,
+            0
+          ]
+        },
+        "upper_arm_l": {
+          "position": [
+            -0.45499999999999996,
+            1.1100000000000003,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.17,
+            0.15
+          ],
+          "role": "body",
+          "parent": "torso",
+          "anchor": [
+            -0.45499999999999996,
+            1.2400000000000002,
+            0
+          ]
+        },
+        "forearm_l": {
+          "position": [
+            -0.45499999999999996,
+            0.8000000000000002,
+            0.015
+          ],
+          "halfExtents": [
+            0.12,
+            0.16,
+            0.13
+          ],
+          "role": "body",
+          "parent": "upper_arm_l",
+          "anchor": [
+            -0.45499999999999996,
+            0.9400000000000002,
+            0
+          ]
+        },
+        "thigh_l": {
+          "position": [
+            -0.17099999999999999,
+            0.5375,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.1925,
+            0.15
+          ],
+          "role": "body",
+          "parent": "pelvis",
+          "anchor": [
+            -0.17099999999999999,
+            0.67,
+            0
+          ]
+        },
+        "shin_l": {
+          "position": [
+            -0.17099999999999999,
+            0.1925,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.1925,
+            0.16
+          ],
+          "role": "body",
+          "parent": "thigh_l",
+          "anchor": [
+            -0.17099999999999999,
+            0.385,
+            0
+          ]
+        },
+        "upper_arm_r": {
+          "position": [
+            0.45499999999999996,
+            1.1100000000000003,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.17,
+            0.15
+          ],
+          "role": "body",
+          "parent": "torso",
+          "anchor": [
+            0.45499999999999996,
+            1.2400000000000002,
+            0
+          ]
+        },
+        "forearm_r": {
+          "position": [
+            0.45499999999999996,
+            0.8000000000000002,
+            0.015
+          ],
+          "halfExtents": [
+            0.12,
+            0.16,
+            0.13
+          ],
+          "role": "body",
+          "parent": "upper_arm_r",
+          "anchor": [
+            0.45499999999999996,
+            0.9400000000000002,
+            0
+          ]
+        },
+        "thigh_r": {
+          "position": [
+            0.17099999999999999,
+            0.5375,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.1925,
+            0.15
+          ],
+          "role": "body",
+          "parent": "pelvis",
+          "anchor": [
+            0.17099999999999999,
+            0.67,
+            0
+          ]
+        },
+        "shin_r": {
+          "position": [
+            0.17099999999999999,
+            0.1925,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.1925,
+            0.16
+          ],
+          "role": "body",
+          "parent": "thigh_r",
+          "anchor": [
+            0.17099999999999999,
+            0.385,
+            0
+          ]
+        },
+        "weapon": {
+          "position": [
+            0.45499999999999996,
+            0.6400000000000002,
+            0.15
+          ],
+          "halfExtents": [
+            0.07,
+            0.055,
+            0.5
+          ],
+          "role": "weapon"
+        },
+        "quiver": {
+          "position": [
+            0,
+            1.03,
+            -0.34
+          ],
+          "halfExtents": [
+            0.16,
+            0.32,
+            0.14
+          ],
+          "role": "accessory",
+          "parent": "torso",
+          "anchor": [
+            0,
+            1.3,
+            -0.3
+          ]
+        }
+      }
+    },
+    "mage": {
+      "url": "/models/roster/mage.glb",
+      "parts": {
+        "pelvis": {
+          "position": [
+            0,
+            0.77,
+            0
+          ],
+          "halfExtents": [
+            0.26789999999999997,
+            0.15,
+            0.2
+          ],
+          "role": "body"
+        },
+        "torso": {
+          "position": [
+            0,
+            1.11,
+            0
+          ],
+          "halfExtents": [
+            0.285,
+            0.21,
+            0.22
+          ],
+          "role": "body",
+          "parent": "pelvis",
+          "anchor": [
+            0,
+            0.9400000000000001,
+            0
+          ]
+        },
+        "head": {
+          "position": [
+            0,
+            1.62,
+            0
+          ],
+          "halfExtents": [
+            0.24,
+            0.24,
+            0.23
+          ],
+          "role": "body",
+          "parent": "torso",
+          "anchor": [
+            0,
+            1.3800000000000001,
+            0
+          ]
+        },
+        "upper_arm_l": {
+          "position": [
+            -0.45499999999999996,
+            1.1100000000000003,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.17,
+            0.15
+          ],
+          "role": "body",
+          "parent": "torso",
+          "anchor": [
+            -0.45499999999999996,
+            1.2400000000000002,
+            0
+          ]
+        },
+        "forearm_l": {
+          "position": [
+            -0.45499999999999996,
+            0.8000000000000002,
+            0.015
+          ],
+          "halfExtents": [
+            0.12,
+            0.16,
+            0.13
+          ],
+          "role": "body",
+          "parent": "upper_arm_l",
+          "anchor": [
+            -0.45499999999999996,
+            0.9400000000000002,
+            0
+          ]
+        },
+        "thigh_l": {
+          "position": [
+            -0.17099999999999999,
+            0.5375,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.1925,
+            0.15
+          ],
+          "role": "body",
+          "parent": "pelvis",
+          "anchor": [
+            -0.17099999999999999,
+            0.67,
+            0
+          ]
+        },
+        "shin_l": {
+          "position": [
+            -0.17099999999999999,
+            0.1925,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.1925,
+            0.16
+          ],
+          "role": "body",
+          "parent": "thigh_l",
+          "anchor": [
+            -0.17099999999999999,
+            0.385,
+            0
+          ]
+        },
+        "upper_arm_r": {
+          "position": [
+            0.45499999999999996,
+            1.1100000000000003,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.17,
+            0.15
+          ],
+          "role": "body",
+          "parent": "torso",
+          "anchor": [
+            0.45499999999999996,
+            1.2400000000000002,
+            0
+          ]
+        },
+        "forearm_r": {
+          "position": [
+            0.45499999999999996,
+            0.8000000000000002,
+            0.015
+          ],
+          "halfExtents": [
+            0.12,
+            0.16,
+            0.13
+          ],
+          "role": "body",
+          "parent": "upper_arm_r",
+          "anchor": [
+            0.45499999999999996,
+            0.9400000000000002,
+            0
+          ]
+        },
+        "thigh_r": {
+          "position": [
+            0.17099999999999999,
+            0.5375,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.1925,
+            0.15
+          ],
+          "role": "body",
+          "parent": "pelvis",
+          "anchor": [
+            0.17099999999999999,
+            0.67,
+            0
+          ]
+        },
+        "shin_r": {
+          "position": [
+            0.17099999999999999,
+            0.1925,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.1925,
+            0.16
+          ],
+          "role": "body",
+          "parent": "thigh_r",
+          "anchor": [
+            0.17099999999999999,
+            0.385,
+            0
+          ]
+        },
+        "weapon": {
+          "position": [
+            0.45499999999999996,
+            0.6400000000000002,
+            0.15
+          ],
+          "halfExtents": [
+            0.07,
+            0.055,
+            0.5
+          ],
+          "role": "weapon"
+        },
+        "hat_tip": {
+          "position": [
+            0,
+            2.22,
+            0
+          ],
+          "halfExtents": [
+            0.16,
+            0.15,
+            0.15
+          ],
+          "role": "accessory",
+          "parent": "head",
+          "anchor": [
+            0,
+            2.1,
+            0
+          ]
+        }
+      }
+    },
     "goblin": {
-      "url": "/models/goblin.glb",
+      "url": "/models/roster/goblin.glb",
       "parts": {
         "pelvis": {
           "position": [
@@ -744,6 +1211,1309 @@
             0.07,
             0.055,
             0.5
+          ],
+          "role": "weapon"
+        },
+        "talisman": {
+          "position": [
+            0,
+            0.36,
+            0.31
+          ],
+          "halfExtents": [
+            0.08,
+            0.13,
+            0.05
+          ],
+          "role": "accessory",
+          "parent": "pelvis",
+          "anchor": [
+            0,
+            0.54,
+            0.3
+          ]
+        }
+      }
+    },
+    "runner": {
+      "url": "/models/roster/runner.glb",
+      "parts": {
+        "pelvis": {
+          "position": [
+            0,
+            0.52,
+            0
+          ],
+          "halfExtents": [
+            0.17859999999999998,
+            0.15,
+            0.2
+          ],
+          "role": "body"
+        },
+        "torso": {
+          "position": [
+            0,
+            0.8600000000000001,
+            0
+          ],
+          "halfExtents": [
+            0.19,
+            0.21,
+            0.22
+          ],
+          "role": "body",
+          "parent": "pelvis",
+          "anchor": [
+            0,
+            0.6900000000000001,
+            0
+          ]
+        },
+        "head": {
+          "position": [
+            0,
+            1.37,
+            0
+          ],
+          "halfExtents": [
+            0.24,
+            0.24,
+            0.23
+          ],
+          "role": "body",
+          "parent": "torso",
+          "anchor": [
+            0,
+            1.1300000000000001,
+            0
+          ]
+        },
+        "upper_arm_l": {
+          "position": [
+            -0.36,
+            0.8600000000000001,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.17,
+            0.15
+          ],
+          "role": "body",
+          "parent": "torso",
+          "anchor": [
+            -0.36,
+            0.9900000000000001,
+            0
+          ]
+        },
+        "forearm_l": {
+          "position": [
+            -0.36,
+            0.5500000000000002,
+            0.015
+          ],
+          "halfExtents": [
+            0.12,
+            0.16,
+            0.13
+          ],
+          "role": "body",
+          "parent": "upper_arm_l",
+          "anchor": [
+            -0.36,
+            0.6900000000000002,
+            0
+          ]
+        },
+        "thigh_l": {
+          "position": [
+            -0.11399999999999999,
+            0.35000000000000003,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.13,
+            0.15
+          ],
+          "role": "body",
+          "parent": "pelvis",
+          "anchor": [
+            -0.11399999999999999,
+            0.42000000000000004,
+            0
+          ]
+        },
+        "shin_l": {
+          "position": [
+            -0.11399999999999999,
+            0.13,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.13,
+            0.16
+          ],
+          "role": "body",
+          "parent": "thigh_l",
+          "anchor": [
+            -0.11399999999999999,
+            0.26,
+            0
+          ]
+        },
+        "upper_arm_r": {
+          "position": [
+            0.36,
+            0.8600000000000001,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.17,
+            0.15
+          ],
+          "role": "body",
+          "parent": "torso",
+          "anchor": [
+            0.36,
+            0.9900000000000001,
+            0
+          ]
+        },
+        "forearm_r": {
+          "position": [
+            0.36,
+            0.5500000000000002,
+            0.015
+          ],
+          "halfExtents": [
+            0.12,
+            0.16,
+            0.13
+          ],
+          "role": "body",
+          "parent": "upper_arm_r",
+          "anchor": [
+            0.36,
+            0.6900000000000002,
+            0
+          ]
+        },
+        "thigh_r": {
+          "position": [
+            0.11399999999999999,
+            0.35000000000000003,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.13,
+            0.15
+          ],
+          "role": "body",
+          "parent": "pelvis",
+          "anchor": [
+            0.11399999999999999,
+            0.42000000000000004,
+            0
+          ]
+        },
+        "shin_r": {
+          "position": [
+            0.11399999999999999,
+            0.13,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.13,
+            0.16
+          ],
+          "role": "body",
+          "parent": "thigh_r",
+          "anchor": [
+            0.11399999999999999,
+            0.26,
+            0
+          ]
+        },
+        "weapon": {
+          "position": [
+            0.36,
+            0.3900000000000001,
+            0.15
+          ],
+          "halfExtents": [
+            0.07,
+            0.055,
+            0.5
+          ],
+          "role": "weapon"
+        },
+        "talisman": {
+          "position": [
+            0,
+            0.36,
+            0.31
+          ],
+          "halfExtents": [
+            0.08,
+            0.13,
+            0.05
+          ],
+          "role": "accessory",
+          "parent": "pelvis",
+          "anchor": [
+            0,
+            0.54,
+            0.3
+          ]
+        }
+      }
+    },
+    "brute": {
+      "url": "/models/roster/brute.glb",
+      "parts": {
+        "pelvis": {
+          "position": [
+            0,
+            0.52,
+            0
+          ],
+          "halfExtents": [
+            0.3384,
+            0.15,
+            0.2
+          ],
+          "role": "body"
+        },
+        "torso": {
+          "position": [
+            0,
+            0.8600000000000001,
+            0
+          ],
+          "halfExtents": [
+            0.36,
+            0.21,
+            0.22
+          ],
+          "role": "body",
+          "parent": "pelvis",
+          "anchor": [
+            0,
+            0.6900000000000001,
+            0
+          ]
+        },
+        "head": {
+          "position": [
+            0,
+            1.37,
+            0
+          ],
+          "halfExtents": [
+            0.24,
+            0.24,
+            0.23
+          ],
+          "role": "body",
+          "parent": "torso",
+          "anchor": [
+            0,
+            1.1300000000000001,
+            0
+          ]
+        },
+        "upper_arm_l": {
+          "position": [
+            -0.53,
+            0.8600000000000001,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.17,
+            0.15
+          ],
+          "role": "body",
+          "parent": "torso",
+          "anchor": [
+            -0.53,
+            0.9900000000000001,
+            0
+          ]
+        },
+        "forearm_l": {
+          "position": [
+            -0.53,
+            0.5500000000000002,
+            0.015
+          ],
+          "halfExtents": [
+            0.12,
+            0.16,
+            0.13
+          ],
+          "role": "body",
+          "parent": "upper_arm_l",
+          "anchor": [
+            -0.53,
+            0.6900000000000002,
+            0
+          ]
+        },
+        "thigh_l": {
+          "position": [
+            -0.216,
+            0.35000000000000003,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.13,
+            0.15
+          ],
+          "role": "body",
+          "parent": "pelvis",
+          "anchor": [
+            -0.216,
+            0.42000000000000004,
+            0
+          ]
+        },
+        "shin_l": {
+          "position": [
+            -0.216,
+            0.13,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.13,
+            0.16
+          ],
+          "role": "body",
+          "parent": "thigh_l",
+          "anchor": [
+            -0.216,
+            0.26,
+            0
+          ]
+        },
+        "upper_arm_r": {
+          "position": [
+            0.53,
+            0.8600000000000001,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.17,
+            0.15
+          ],
+          "role": "body",
+          "parent": "torso",
+          "anchor": [
+            0.53,
+            0.9900000000000001,
+            0
+          ]
+        },
+        "forearm_r": {
+          "position": [
+            0.53,
+            0.5500000000000002,
+            0.015
+          ],
+          "halfExtents": [
+            0.12,
+            0.16,
+            0.13
+          ],
+          "role": "body",
+          "parent": "upper_arm_r",
+          "anchor": [
+            0.53,
+            0.6900000000000002,
+            0
+          ]
+        },
+        "thigh_r": {
+          "position": [
+            0.216,
+            0.35000000000000003,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.13,
+            0.15
+          ],
+          "role": "body",
+          "parent": "pelvis",
+          "anchor": [
+            0.216,
+            0.42000000000000004,
+            0
+          ]
+        },
+        "shin_r": {
+          "position": [
+            0.216,
+            0.13,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.13,
+            0.16
+          ],
+          "role": "body",
+          "parent": "thigh_r",
+          "anchor": [
+            0.216,
+            0.26,
+            0
+          ]
+        },
+        "weapon": {
+          "position": [
+            0.53,
+            0.3900000000000001,
+            0.15
+          ],
+          "halfExtents": [
+            0.07,
+            0.055,
+            0.5
+          ],
+          "role": "weapon"
+        },
+        "talisman": {
+          "position": [
+            0,
+            0.36,
+            0.31
+          ],
+          "halfExtents": [
+            0.08,
+            0.13,
+            0.05
+          ],
+          "role": "accessory",
+          "parent": "pelvis",
+          "anchor": [
+            0,
+            0.54,
+            0.3
+          ]
+        }
+      }
+    },
+    "revenant": {
+      "url": "/models/roster/revenant.glb",
+      "parts": {
+        "pelvis": {
+          "position": [
+            0,
+            0.52,
+            0
+          ],
+          "halfExtents": [
+            0.20679999999999998,
+            0.15,
+            0.2
+          ],
+          "role": "body"
+        },
+        "torso": {
+          "position": [
+            0,
+            0.8600000000000001,
+            0
+          ],
+          "halfExtents": [
+            0.22,
+            0.21,
+            0.22
+          ],
+          "role": "body",
+          "parent": "pelvis",
+          "anchor": [
+            0,
+            0.6900000000000001,
+            0
+          ]
+        },
+        "head": {
+          "position": [
+            0,
+            1.37,
+            0
+          ],
+          "halfExtents": [
+            0.24,
+            0.24,
+            0.23
+          ],
+          "role": "body",
+          "parent": "torso",
+          "anchor": [
+            0,
+            1.1300000000000001,
+            0
+          ]
+        },
+        "upper_arm_l": {
+          "position": [
+            -0.39,
+            0.8600000000000001,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.17,
+            0.15
+          ],
+          "role": "body",
+          "parent": "torso",
+          "anchor": [
+            -0.39,
+            0.9900000000000001,
+            0
+          ]
+        },
+        "forearm_l": {
+          "position": [
+            -0.39,
+            0.5500000000000002,
+            0.015
+          ],
+          "halfExtents": [
+            0.12,
+            0.16,
+            0.13
+          ],
+          "role": "body",
+          "parent": "upper_arm_l",
+          "anchor": [
+            -0.39,
+            0.6900000000000002,
+            0
+          ]
+        },
+        "thigh_l": {
+          "position": [
+            -0.132,
+            0.35000000000000003,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.13,
+            0.15
+          ],
+          "role": "body",
+          "parent": "pelvis",
+          "anchor": [
+            -0.132,
+            0.42000000000000004,
+            0
+          ]
+        },
+        "shin_l": {
+          "position": [
+            -0.132,
+            0.13,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.13,
+            0.16
+          ],
+          "role": "body",
+          "parent": "thigh_l",
+          "anchor": [
+            -0.132,
+            0.26,
+            0
+          ]
+        },
+        "upper_arm_r": {
+          "position": [
+            0.39,
+            0.8600000000000001,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.17,
+            0.15
+          ],
+          "role": "body",
+          "parent": "torso",
+          "anchor": [
+            0.39,
+            0.9900000000000001,
+            0
+          ]
+        },
+        "forearm_r": {
+          "position": [
+            0.39,
+            0.5500000000000002,
+            0.015
+          ],
+          "halfExtents": [
+            0.12,
+            0.16,
+            0.13
+          ],
+          "role": "body",
+          "parent": "upper_arm_r",
+          "anchor": [
+            0.39,
+            0.6900000000000002,
+            0
+          ]
+        },
+        "thigh_r": {
+          "position": [
+            0.132,
+            0.35000000000000003,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.13,
+            0.15
+          ],
+          "role": "body",
+          "parent": "pelvis",
+          "anchor": [
+            0.132,
+            0.42000000000000004,
+            0
+          ]
+        },
+        "shin_r": {
+          "position": [
+            0.132,
+            0.13,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.13,
+            0.16
+          ],
+          "role": "body",
+          "parent": "thigh_r",
+          "anchor": [
+            0.132,
+            0.26,
+            0
+          ]
+        },
+        "weapon": {
+          "position": [
+            0.39,
+            0.3900000000000001,
+            0.15
+          ],
+          "halfExtents": [
+            0.07,
+            0.055,
+            0.5
+          ],
+          "role": "weapon"
+        },
+        "talisman": {
+          "position": [
+            0,
+            0.36,
+            0.31
+          ],
+          "halfExtents": [
+            0.08,
+            0.13,
+            0.05
+          ],
+          "role": "accessory",
+          "parent": "pelvis",
+          "anchor": [
+            0,
+            0.54,
+            0.3
+          ]
+        }
+      }
+    },
+    "boss": {
+      "url": "/models/roster/boss.glb",
+      "parts": {
+        "pelvis": {
+          "position": [
+            0,
+            0.52,
+            0
+          ],
+          "halfExtents": [
+            0.3055,
+            0.15,
+            0.2
+          ],
+          "role": "body"
+        },
+        "torso": {
+          "position": [
+            0,
+            0.8600000000000001,
+            0
+          ],
+          "halfExtents": [
+            0.325,
+            0.21,
+            0.22
+          ],
+          "role": "body",
+          "parent": "pelvis",
+          "anchor": [
+            0,
+            0.6900000000000001,
+            0
+          ]
+        },
+        "head": {
+          "position": [
+            0,
+            1.37,
+            0
+          ],
+          "halfExtents": [
+            0.24,
+            0.24,
+            0.23
+          ],
+          "role": "body",
+          "parent": "torso",
+          "anchor": [
+            0,
+            1.1300000000000001,
+            0
+          ]
+        },
+        "upper_arm_l": {
+          "position": [
+            -0.495,
+            0.8600000000000001,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.17,
+            0.15
+          ],
+          "role": "body",
+          "parent": "torso",
+          "anchor": [
+            -0.495,
+            0.9900000000000001,
+            0
+          ]
+        },
+        "forearm_l": {
+          "position": [
+            -0.495,
+            0.5500000000000002,
+            0.015
+          ],
+          "halfExtents": [
+            0.12,
+            0.16,
+            0.13
+          ],
+          "role": "body",
+          "parent": "upper_arm_l",
+          "anchor": [
+            -0.495,
+            0.6900000000000002,
+            0
+          ]
+        },
+        "thigh_l": {
+          "position": [
+            -0.195,
+            0.35000000000000003,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.13,
+            0.15
+          ],
+          "role": "body",
+          "parent": "pelvis",
+          "anchor": [
+            -0.195,
+            0.42000000000000004,
+            0
+          ]
+        },
+        "shin_l": {
+          "position": [
+            -0.195,
+            0.13,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.13,
+            0.16
+          ],
+          "role": "body",
+          "parent": "thigh_l",
+          "anchor": [
+            -0.195,
+            0.26,
+            0
+          ]
+        },
+        "upper_arm_r": {
+          "position": [
+            0.495,
+            0.8600000000000001,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.17,
+            0.15
+          ],
+          "role": "body",
+          "parent": "torso",
+          "anchor": [
+            0.495,
+            0.9900000000000001,
+            0
+          ]
+        },
+        "forearm_r": {
+          "position": [
+            0.495,
+            0.5500000000000002,
+            0.015
+          ],
+          "halfExtents": [
+            0.12,
+            0.16,
+            0.13
+          ],
+          "role": "body",
+          "parent": "upper_arm_r",
+          "anchor": [
+            0.495,
+            0.6900000000000002,
+            0
+          ]
+        },
+        "thigh_r": {
+          "position": [
+            0.195,
+            0.35000000000000003,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.13,
+            0.15
+          ],
+          "role": "body",
+          "parent": "pelvis",
+          "anchor": [
+            0.195,
+            0.42000000000000004,
+            0
+          ]
+        },
+        "shin_r": {
+          "position": [
+            0.195,
+            0.13,
+            0
+          ],
+          "halfExtents": [
+            0.13,
+            0.13,
+            0.16
+          ],
+          "role": "body",
+          "parent": "thigh_r",
+          "anchor": [
+            0.195,
+            0.26,
+            0
+          ]
+        },
+        "weapon": {
+          "position": [
+            0.495,
+            0.3900000000000001,
+            0.15
+          ],
+          "halfExtents": [
+            0.07,
+            0.055,
+            0.5
+          ],
+          "role": "weapon"
+        },
+        "talisman": {
+          "position": [
+            0,
+            0.36,
+            0.31
+          ],
+          "halfExtents": [
+            0.08,
+            0.13,
+            0.05
+          ],
+          "role": "accessory",
+          "parent": "pelvis",
+          "anchor": [
+            0,
+            0.54,
+            0.3
+          ]
+        }
+      }
+    },
+    "arrow": {
+      "url": "/models/roster/arrow.glb",
+      "parts": {
+        "projectile": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "halfExtents": [
+            0.1,
+            0.1,
+            0.4
+          ],
+          "role": "projectile"
+        }
+      }
+    },
+    "magic_missile": {
+      "url": "/models/roster/magic_missile.glb",
+      "parts": {
+        "projectile": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "halfExtents": [
+            0.1,
+            0.1,
+            0.4
+          ],
+          "role": "projectile"
+        }
+      }
+    },
+    "warrior_fire": {
+      "url": "/models/weapons/warrior_fire.glb",
+      "parts": {
+        "weapon": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "halfExtents": [
+            0.3,
+            0.6,
+            0.6
+          ],
+          "role": "weapon"
+        }
+      }
+    },
+    "warrior_lightning": {
+      "url": "/models/weapons/warrior_lightning.glb",
+      "parts": {
+        "weapon": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "halfExtents": [
+            0.3,
+            0.6,
+            0.6
+          ],
+          "role": "weapon"
+        }
+      }
+    },
+    "warrior_ice": {
+      "url": "/models/weapons/warrior_ice.glb",
+      "parts": {
+        "weapon": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "halfExtents": [
+            0.3,
+            0.6,
+            0.6
+          ],
+          "role": "weapon"
+        }
+      }
+    },
+    "warrior_acid": {
+      "url": "/models/weapons/warrior_acid.glb",
+      "parts": {
+        "weapon": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "halfExtents": [
+            0.3,
+            0.6,
+            0.6
+          ],
+          "role": "weapon"
+        }
+      }
+    },
+    "guardian_fire": {
+      "url": "/models/weapons/guardian_fire.glb",
+      "parts": {
+        "weapon": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "halfExtents": [
+            0.3,
+            0.6,
+            0.6
+          ],
+          "role": "weapon"
+        }
+      }
+    },
+    "guardian_lightning": {
+      "url": "/models/weapons/guardian_lightning.glb",
+      "parts": {
+        "weapon": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "halfExtents": [
+            0.3,
+            0.6,
+            0.6
+          ],
+          "role": "weapon"
+        }
+      }
+    },
+    "guardian_ice": {
+      "url": "/models/weapons/guardian_ice.glb",
+      "parts": {
+        "weapon": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "halfExtents": [
+            0.3,
+            0.6,
+            0.6
+          ],
+          "role": "weapon"
+        }
+      }
+    },
+    "guardian_acid": {
+      "url": "/models/weapons/guardian_acid.glb",
+      "parts": {
+        "weapon": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "halfExtents": [
+            0.3,
+            0.6,
+            0.6
+          ],
+          "role": "weapon"
+        }
+      }
+    },
+    "archer_fire": {
+      "url": "/models/weapons/archer_fire.glb",
+      "parts": {
+        "weapon": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "halfExtents": [
+            0.3,
+            0.6,
+            0.6
+          ],
+          "role": "weapon"
+        }
+      }
+    },
+    "archer_lightning": {
+      "url": "/models/weapons/archer_lightning.glb",
+      "parts": {
+        "weapon": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "halfExtents": [
+            0.3,
+            0.6,
+            0.6
+          ],
+          "role": "weapon"
+        }
+      }
+    },
+    "archer_ice": {
+      "url": "/models/weapons/archer_ice.glb",
+      "parts": {
+        "weapon": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "halfExtents": [
+            0.3,
+            0.6,
+            0.6
+          ],
+          "role": "weapon"
+        }
+      }
+    },
+    "archer_acid": {
+      "url": "/models/weapons/archer_acid.glb",
+      "parts": {
+        "weapon": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "halfExtents": [
+            0.3,
+            0.6,
+            0.6
+          ],
+          "role": "weapon"
+        }
+      }
+    },
+    "mage_fire": {
+      "url": "/models/weapons/mage_fire.glb",
+      "parts": {
+        "weapon": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "halfExtents": [
+            0.3,
+            0.6,
+            0.6
+          ],
+          "role": "weapon"
+        }
+      }
+    },
+    "mage_lightning": {
+      "url": "/models/weapons/mage_lightning.glb",
+      "parts": {
+        "weapon": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "halfExtents": [
+            0.3,
+            0.6,
+            0.6
+          ],
+          "role": "weapon"
+        }
+      }
+    },
+    "mage_ice": {
+      "url": "/models/weapons/mage_ice.glb",
+      "parts": {
+        "weapon": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "halfExtents": [
+            0.3,
+            0.6,
+            0.6
+          ],
+          "role": "weapon"
+        }
+      }
+    },
+    "mage_acid": {
+      "url": "/models/weapons/mage_acid.glb",
+      "parts": {
+        "weapon": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "halfExtents": [
+            0.3,
+            0.6,
+            0.6
           ],
           "role": "weapon"
         }

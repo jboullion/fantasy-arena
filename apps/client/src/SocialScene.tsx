@@ -32,7 +32,11 @@ export function SocialScene({ camp = false, character = 'warrior' }: { camp?: bo
       <color attach="background" args={[camp ? '#101e24' : '#241b14']}/><fog attach="fog" args={[camp ? '#101e24' : '#241b14',18,40]}/>
       <Camera camp={camp}/><hemisphereLight args={[camp ? '#a8c9e8' : '#ffe4b1','#3c2921',camp ? 1.6 : 2]}/>
       <directionalLight position={[-3,9,4]} intensity={camp ? 1.5 : 2.3} color={camp ? '#9bbfe9' : '#ffe0af'} castShadow shadow-mapSize={[2048,2048]} shadow-normalBias={.04}/>
-      <Suspense fallback={null}><Asset camp={camp}/>{members.map((m,i) => <SocialPlayer key={m.actorId} character={m.character} position={camp ? seats[i] : [(i-(members.length-1)/2)*1.55,0,0]} facing={camp ? Math.atan2(-seats[i][0],-seats[i][2]) : .35} seated={camp} seed={m.actorId}/>)}</Suspense>
+      <Suspense fallback={null}><Asset camp={camp}/></Suspense>
+      {/* A new class or weapon must only suspend its owner's model, not the room or party. */}
+      {members.map((m,i) => <Suspense key={m.actorId} fallback={null}>
+        <SocialPlayer character={m.character} equippedWeapon={camp?net.lobby?.run?.players.find(p=>p.id===m.actorId)?.equippedWeapon:undefined} position={camp ? seats[i] : [(i-(members.length-1)/2)*1.55,0,0]} facing={camp ? Math.atan2(-seats[i][0],-seats[i][2]) : .35} seated={camp} seed={m.actorId}/>
+      </Suspense>)}
       <Fire position={camp ? [0,.2,0] : [-3.6,.35,-4.7]}/>
     </Canvas>
     <div className="scene-caption">{camp ? 'THE EMBER CAMP · A MOMENT OF RESPITE' : 'THE WAYFARER’S REST · PARTY LOBBY'}<div>{members.map(m => <span key={m.actorId}>{m.name} {m.ready ? '· Ready' : ''}</span>)}</div></div>

@@ -1,6 +1,6 @@
 # Fantasy Arena — Prototype Slice 0.1
 
-A playable 1–4 player, ten-round survival prototype based on the design documents in `docs/`. Gather a party, choose a Human Warrior or Dwarf Guardian, and survive the forest clearing while improving your equipment between rounds.
+A playable 1–4 player, ten-round survival prototype based on the design documents in `docs/`. Gather a party, choose a Human Warrior, Dwarf Guardian, Archer or Mage, and survive the forest clearing while improving your equipment between rounds.
 
 ## Run
 
@@ -66,12 +66,12 @@ Rounds 3, 6 and 9 introduce Ember Runners, Stone Brutes and Frost Revenants, res
 
 Between clears, all remaining party members receive 100 gold, including fallen teammates. Each new round revives and fully heals the party. Equipment lasts for the current run only:
 
-| Upgrade | Effect per rank | First price | Price increase | Rank cap |
-| --- | --- | ---: | ---: | ---: |
-| Honed longsword | +10 sword damage | 80 | +40 per rank | 5 |
-| Forged plate | +25 max HP, 2 damage reduction per hit | 70 | +35 per rank | 5 |
+Each shop offers two weapons for the selected class. One purchase per visit costs 80 gold and replaces the current weapon immediately, including its visible camp and combat model. Four elemental variants exist for every sword, axe, bow and staff: fire, lightning, ice and poison. Elements apply effects instead of bonus impact damage: fire deals 5 damage every second for 5 seconds, lightning splashes 5 damage within 2 metres (excluding the direct target, with no chaining), poison halves enemy outgoing damage for 5 seconds, and ice halves movement speed for 5 seconds. Weapon particles, projectile trails, hit sparks and persistent status particles visualize the effects. Offers rotate between visits and exclude the currently equipped weapon. Durations refresh on repeat hits without stacking strength. Fire refreshes preserve the next scheduled tick and credit the most recent applier. Tuning lives in game-data defaults: fireTickDamage, fireTickInterval, fireDuration, lightningDamage, lightningRadius, poisonDuration, poisonDamageMultiplier, iceDuration and iceSpeedMultiplier.
 
-The shop shows each adventurer's cumulative damage, damage by weapon, kills and damage taken. Damage totals exclude overkill. The current sword and its upgrade share the `weapon.longsword` ID.
+Forged plate remains a separate armor upgrade: +25 maximum HP and 2 damage reduction per rank, starting at 70 gold and rising by 35 per rank, capped at five ranks.
+
+The shop shows cumulative damage, damage by weapon and damage type, kills and damage taken. Damage totals exclude overkill. Every replacement weapon records its own damage total. Archer and Mage base attacks deal 25 damage; Dwarf's axe retains 35.
+
 
 Run reports automatically save in the browser after each round. **Saved runs** shows the latest 20 reports, with a weapon breakdown; **Export run statistics** downloads JSON. Reports survive reloads and new runs. These are local reports, not account/cloud saves or resumable matches. Losing a run retains its statistics but grants no reward for the failed round.
 
@@ -98,14 +98,14 @@ Restart, tuning, heal and clear shortcuts are available in the offline combat la
 - `packages/game-data`: centralized starting values and stable character/weapon/enemy IDs. Arena width and length are editable here.
 - `apps/client/src/runtime.ts`: fixed 60 Hz accumulator, events, low-frequency Zustand HUD snapshots, debug commands.
 - `apps/client/src/input.ts`: keyboard and Gamepad API mapped to movement/actions.
-- `apps/client/src/Scene.tsx`: R3F world, instanced goblins, sword motion, particles, following camera and temporary Rapier physics corpses.
+- `apps/client/src/Scene.tsx`: R3F world, five instanced enemy types, instanced projectiles, weapon motion, particles, following camera and temporary Rapier physics corpses.
 - `apps/client/src/audio.ts`: bounded synthesized placeholder sound cues.
 - `apps/client/src/main.tsx`: DOM HUD, pause/results and tuning.
 - `apps/client/src/Lobby.tsx` and `network.ts`: character/profile/party UI, connection lifecycle, room messages and lobby transitions.
 
 Units are meters; Y is up; movement uses the XZ plane. The fixed camera faces along negative Z, so W moves toward the top of the screen. Movement and attack facing are independent. The simulation emits events; it never imports React, Three.js, Rapier, or browser APIs.
 
-Blender-authored low-poly models now have articulated Rapier death ragdolls and independent dropped weapons. The warrior has a hinged scabbard and the dwarf has a two-part physics beard. Enemy ragdolls are capped at eight and removed after five seconds; player ragdolls remain until revival or scene exit. Gameplay collisions still use circle separation and rectangular bounds, so cosmetic physics does not change authoritative combat. See `assets/characters/README.md` for the editable Blender source, GLB contract and verification commands.
+Blender-authored low-poly models now have articulated Rapier death ragdolls and independent dropped weapons. The warrior has a hinged scabbard, the dwarf has a two-part physics beard and detachable axe, the Archer has a hinged quiver, and the Mage has a fixed hat base and spring-supported tip. The expanded editable source is `assets/characters/fantasy-arena-roster.blend`. Enemy ragdolls are capped at eight and removed after five seconds; player ragdolls remain until revival or scene exit. Gameplay collisions still use circle separation and rectangular bounds, so cosmetic physics does not change authoritative combat. See `assets/characters/README.md` for the editable Blender source, GLB contract and verification commands.
 
 Multiplayer sends movement inputs rather than client-owned positions or damage. Remote world positions are smoothed on the client; prediction, latency compensation, reconnect/resume, and schema-delta bandwidth optimization are follow-ups. `VITE_MULTIPLAYER_URL` can override the default same-origin proxy endpoint when using separate hosting. Run `npm run dev:server` and `npm run dev:client` separately if needed. The production client build is static; a reachable Node game server and reverse proxy are still required for multiplayer.
 

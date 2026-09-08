@@ -4,6 +4,8 @@ import { InputManager } from './input';
 import { AudioSystem } from './audio';
 import { networked, useNetwork, send, receiveWorld } from './network';
 import type { WorldSnapshot } from '../../../packages/game-core/src/multiplayer';
+import { ProjectileMotion } from './projectileMotion';
+export const projectileMotion = new ProjectileMotion();
 export const sim = new Simulation();
 export const audio = new AudioSystem();
 export const useUI = create(() => ({ revision: 0, debug: false, muted: false, fps: 0, simulationMs: 0, device: 'keyboard' }));
@@ -35,17 +37,19 @@ receiveWorld(world => {
   const me = network.lobby?.members.find(m => m.sessionId === network.sessionId);
   const fresh = receivedRound !== world.round || (world.phase === 'playing' && sim.phase !== 'playing');
   receivedRound = world.round;
-  if (fresh) { effects.length = 0; sim.events = []; input.clear(); }
+  if (fresh) { effects.length = 0; sim.events = []; input.clear(); projectileMotion.clear(); }
   const oldPlayers = sim.players, oldEnemies = sim.enemies;
   sim.players = world.players.map(p => { const old = !fresh && oldPlayers.find(other => other.id === p.id); return { ...p, x: old ? old.x : p.x, z: old ? old.z : p.z }; });
   sim.enemies = world.enemies.map(e => { const old = !fresh && oldEnemies.find(other => other.id === e.id); return { ...e, x: old ? old.x : e.x, z: old ? old.z : e.z }; });
   if (me) sim.localPlayerId = me.actorId;
+  sim.projectiles = world.projectiles;
+  projectileMotion.receive(world.projectiles, performance.now()/1000, world.players);
   sim.phase = world.phase; sim.time = world.time; sim.kills = world.kills; sim.config = world.config;
   sim.events.push(...world.events); latest = world;
   refresh();
 });
 useNetwork.subscribe((state, previous) => {
-  if (state.lobby?.stage === 'lobby' || (state.lobby?.stage === 'shop' && previous.lobby?.stage === 'game')) { latest = undefined; receivedRound = -1; effects.length = 0; sim.events = []; input.clear(); }
+  if (state.status === 'offline' || state.lobby?.stage === 'lobby' || (state.lobby?.stage === 'shop' && previous.lobby?.stage === 'game')) { latest = undefined; receivedRound = -1; effects.length = 0; sim.events = []; input.clear(); projectileMotion.clear(); }
 });
 export function advance(delta: number) {
   const actions = input.read();

@@ -17,7 +17,11 @@
     "dev:client": "vite --host 0.0.0.0",
     "dev:server": "tsx apps/server/src/main.ts",
     "start:server": "tsx apps/server/src/main.ts",
-    "test:run": "tsx tests/run-browser.ts"
+    "test:run": "tsx tests/run-browser.ts",
+    "test:roster": "node tests/roster-browser.mjs",
+    "test:motion": "tsx tests/motion-browser.ts",
+    "test:equipment": "tsx tests/equipment-browser.ts",
+    "test:effects": "node tests/effects-browser.mjs"
   },
   "dependencies": {
     "@colyseus/core": "^0.17.50",
