@@ -8,12 +8,12 @@ describe('ten-round run', () => {
     const run = new RunProgress('retry', roster), s = new Simulation();
     expect(run.retry()).toBe(false);
     s.reset(run.summary.players, 1); run.finish(s.players, true);
-    run.buy(10000, 'weapon'); run.next();
+    run.buy(10000, run.summary.players[0].offers[0]); run.next();
     s.reset(run.summary.players, 2); s.player.stats.totalDamage = 123;
     run.finish(s.players, false);
     expect(run.retry()).toBe(true); expect(run.retry()).toBe(false);
     expect(run.summary.round).toBe(2); expect(run.summary.roundsCompleted).toBe(1);
-    expect(run.summary.players[0]).toMatchObject({ gold: 20, weaponLevel: 1, stats: { totalDamage: 123 } });
+    expect(run.summary.players[0]).toMatchObject({ gold: 20, equippedWeapon: 'warrior_fire', stats: { totalDamage: 123 } });
     s.reset(run.summary.players, 2);
     expect(s.player.hp).toBe(s.player.maxHealth);
     expect(run.finish(s.players, true)).toBe(true);
@@ -23,25 +23,25 @@ describe('ten-round run', () => {
   });
   it('caps equipment ranks and rejects duplicate purchases beyond the cap', () => {
     const run=new RunProgress('run',roster),s=new Simulation();s.reset(roster);run.finish(s.players,true);run.summary.players[0].gold=10000;
-    for(let i=0;i<5;i++)expect(run.buy(10000,'weapon')).toBe(true);
-    const balance=run.summary.players[0].gold;expect(run.buy(10000,'weapon')).toBe(false);expect(run.summary.players[0].gold).toBe(balance);
+    for(let i=0;i<5;i++)expect(run.buy(10000,'armor')).toBe(true);
+    const balance=run.summary.players[0].gold;expect(run.buy(10000,'armor')).toBe(false);expect(run.summary.players[0].gold).toBe(balance);
   });
   it('grants one reward per clear, charges personal currency, and applies carried equipment', () => {
     const run=new RunProgress('run',roster), s=new Simulation();s.reset(roster);
-    expect(run.buy(10000,'weapon')).toBe(false);
+    expect(run.buy(10000,run.summary.players[0].offers[0]??'weapon')).toBe(false);
     expect(run.finish(s.players,true)).toBe(true);expect(run.finish(s.players,true)).toBe(false);
     expect(run.summary.players[0].gold).toBe(100);
-    expect(run.buy(10000,'weapon')).toBe(true);expect(run.summary.players[0].gold).toBe(20);
+    expect(run.buy(10000,run.summary.players[0].offers[0]??'weapon')).toBe(true);expect(run.summary.players[0].gold).toBe(20);
     expect(run.buy(10000,'armor')).toBe(false);expect(run.buy(123,'weapon')).toBe(false);
     expect(run.next()).toBe(true);s.reset(run.summary.players,run.summary.round);
-    expect(s.player.weaponLevel).toBe(1);expect(s.player.hp).toBe(s.player.maxHealth);
+    expect(s.player.equippedWeapon).toBe('warrior_fire');expect(s.player.hp).toBe(s.player.maxHealth);
     run.finish(s.players,true);expect(run.buy(10000,'armor')).toBe(true);run.next();s.reset(run.summary.players,3);
     expect(s.player.maxHealth).toBe(125);expect(s.player.armorLevel).toBe(1);
   });
   it('wins only after ten clears and rejects further purchases or rounds', () => {
     const run=new RunProgress('run',roster), s=new Simulation();
     for(let round=1;round<=10;round++){s.reset(run.summary.players,round);run.finish(s.players,true);expect(run.summary.roundsCompleted).toBe(round);if(round<10){expect(run.summary.result).toBe('active');expect(run.next()).toBe(true);}}
-    expect(run.summary.result).toBe('won');expect(run.next()).toBe(false);expect(run.buy(10000,'weapon')).toBe(false);expect(run.summary.players[0].gold).toBe(1000);
+    expect(run.summary.result).toBe('won');expect(run.next()).toBe(false);expect(run.buy(10000,run.summary.players[0].offers[0]??'weapon')).toBe(false);expect(run.summary.players[0].gold).toBe(1000);
   });
   it('does not pay for failed rounds and preserves final stats', () => {
     const run=new RunProgress('run',roster),s=new Simulation();s.reset(roster);s.player.stats.totalDamage=123;s.player.stats.damageByWeapon['weapon.longsword']=123;
@@ -56,9 +56,9 @@ describe('ten-round run', () => {
     s.enemies=s.enemies.filter(e=>e.enemyType!=='boss');s.stepMultiplayer(1/60,new Map());expect(s.phase).toBe('complete');
   });
   it('counts effective damage by weapon, excludes overkill, and carries totals without duplication', () => {
-    const s=new Simulation({enemySpeed:0,knockback:0});s.reset([{...roster[0],weaponLevel:1}]);s.spawnClock=999;s.enemies=[s.enemies[0]];Object.assign(s.enemies[0],{x:0,z:2,hp:30});advance(s,.2);
-    expect(s.player.stats.totalDamage).toBe(30);expect(s.player.stats.damageByWeapon['weapon.longsword']).toBe(30);expect(s.player.stats.kills).toBe(1);expect(s.events.find(e=>e.type==='hit')?.amount).toBe(35);
-    const run=new RunProgress('run',roster);run.finish(s.players,true);run.next();s.reset(run.summary.players,2);expect(s.player.stats.totalDamage).toBe(30);
+    const s=new Simulation({enemySpeed:0,knockback:0});s.reset([{...roster[0],equippedWeapon:'warrior_fire'}]);s.spawnClock=999;s.enemies=[s.enemies[0]];Object.assign(s.enemies[0],{x:0,z:2,hp:20});advance(s,.2);
+    expect(s.player.stats.totalDamage).toBe(20);expect(s.player.stats.damageByWeapon['warrior_fire']).toBe(20);expect(s.player.stats.kills).toBe(1);expect(s.events.find(e=>e.type==='hit')?.amount).toBe(25);
+    const run=new RunProgress('run',roster);run.finish(s.players,true);run.next();s.reset(run.summary.players,2);expect(s.player.stats.totalDamage).toBe(20);
   });
   it('armor reduces incoming damage and records only health removed', () => {
     const s=new Simulation({enemySpeed:0,swordRange:.1});s.reset([{...roster[0],armorLevel:1}]);s.spawnClock=999;s.enemies=[s.enemies[0]];Object.assign(s.enemies[0],{x:0,z:1,cooldown:0});advance(s,.6);expect(s.player.hp).toBe(117);expect(s.player.stats.damageTaken).toBe(8);

@@ -18,7 +18,7 @@ try {
   await page.waitForTimeout(500);
   let state=await sample();assert.equal(state.joints,1);assert.equal(state.bodies.filter(b=>b.role==='accessory').length,1);
   const before=state.bodies.find(b=>b.part==='scabbard').q;
-  await page.keyboard.down('d');await page.waitForTimeout(450);await page.keyboard.up('d');
+  await page.keyboard.down('w');await page.waitForTimeout(450);await page.keyboard.up('w');
   state=await sample();const after=state.bodies.find(b=>b.part==='scabbard').q;
   assert.ok(Math.abs(before.x-after.x)+Math.abs(before.y-after.y)+Math.abs(before.z-after.z)>.01,'Scabbard responds to motion');
   await page.screenshot({path:'test-results/warrior-model.png'});
@@ -27,7 +27,7 @@ try {
   await page.screenshot({path:'test-results/dwarf-model.png'});
   await page.evaluate(()=>{window.arena.sim.player.hp=0;window.arena.useUI.setState(s=>({revision:s.revision+1}));});
   await page.waitForTimeout(900);state=await sample();
-  assert.equal(state.bodies.filter(b=>b.role==='dropped').length,2,'Sword and shield detach');
+  assert.equal(state.bodies.filter(b=>b.role==='dropped').length,1,'Only the axe detaches; dwarf has no shield');
   assert.equal(state.joints,12,'Dwarf body and beard remain articulated');
   assert.ok(state.bodies.every(b=>Object.values(b.p).every(Number.isFinite)),'Finite physics positions');
   const torso=state.bodies.find(b=>b.part==='torso'),weapon=state.bodies.find(b=>b.part==='weapon');
@@ -38,7 +38,7 @@ try {
   await page.evaluate(()=>{const a=window.arena;a.restart();a.sim.enemies=[];a.sim.spawnClock=999;a.sim.spawn(20);a.sim.killAll();});
   await page.waitForTimeout(800);state=await sample();
   assert.equal(state.bodies.filter(b=>b.role==='dropped').length,8,'Enemy ragdolls are capped at eight');
-  assert.ok(state.bodies.length<=100,'Physics body budget');
+  assert.ok(state.bodies.length<=110,'Physics body budget including enemy talismans');
   await page.screenshot({path:'test-results/enemy-ragdolls.png'});
   await page.waitForTimeout(5000);state=await sample();assert.equal(state.joints,1,'Enemy joints cleaned up');assert.equal(state.bodies.length,3,'Enemy bodies cleaned up');
   await page.evaluate(()=>{const s=window.arena.sim;s.config.playerHealth=99999;s.player.hp=99999;s.config.maxEnemies=200;s.spawn(200);});

@@ -4,23 +4,24 @@ import { chromium, type Page } from '@playwright/test';
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
+import { equipment } from '../packages/game-data/src/index';
 import { ArenaRoom } from '../apps/server/src/ArenaRoom';
 
 // Isolated test server: fixture control is in this process, never a public game command.
 const server = new Server({ transport: new WebSocketTransport(), greet: false, gracefullyShutdown: false });
 server.define('arena', ArenaRoom); await server.listen(2568, '127.0.0.1');
-const vite = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--port', '5174', '--host', '127.0.0.1'], { env: { ...process.env, VITE_MULTIPLAYER_URL: 'http://127.0.0.1:2568' }, stdio: 'ignore', windowsHide: true });
+const vite = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--port', '5182', '--host', '127.0.0.1'], { env: { ...process.env, VITE_MULTIPLAYER_URL: 'http://127.0.0.1:2568' }, stdio: 'ignore', windowsHide: true });
 const installed = `${process.env.LOCALAPPDATA}/ms-playwright/chromium-1228/chrome-win64/chrome.exe`;
 const browser = await chromium.launch({ headless: true, ...(existsSync(installed) ? { executablePath: installed } : {}) });
 const pages: Page[] = [], errors: string[] = [], checks: unknown[] = [];
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 mkdirSync('test-results', {recursive:true});
 try {
-  for(let i=0;i<60;i++){try{if((await fetch('http://127.0.0.1:5174')).ok)break;}catch{}await wait(100);}
+  for(let i=0;i<60;i++){try{if((await fetch('http://127.0.0.1:5182')).ok)break;}catch{}await wait(100);}
   for(let i=0;i<4;i++) {
     const page=await browser.newPage({viewport:{width:1440,height:1000}});pages.push(page);page.on('pageerror',e=>errors.push(e.message));
-    await page.goto('http://127.0.0.1:5174');await page.getByRole('textbox',{name:'Your name'}).fill(`Hero ${i+1}`);
-    if(i%2)await page.getByRole('button',{name:/Dwarf Guardian/}).click();
+    await page.goto('http://127.0.0.1:5182');await page.getByRole('textbox',{name:'Your name'}).fill(`Hero ${i+1}`);
+    if(i>0)await page.getByRole('button',{name: new RegExp(['Human Warrior','Dwarf Guardian','Archer','Mage'][i])}).click();
   }
   await pages[0].getByRole('button',{name:'Create lobby',exact:true}).click();await pages[0].getByTestId('room-code').waitFor();
   const code=(await pages[0].getByTestId('room-code').textContent())!;
@@ -38,7 +39,7 @@ try {
     const types=[...new Set(s.enemies.map(e=>e.enemyType))];
     if([3,6,9].includes(round))assert.ok(types.includes(round===3?'runner':round===6?'brute':'revenant'));
     assert.equal(s.enemies.some(e=>e.enemyType==='boss'),round%5===0);
-    if(round>1){assert.equal(s.players[0].weaponLevel,1);assert.equal(s.players[1].armorLevel,1);assert.equal(s.players[1].maxHealth,165);}
+    if(round>1){assert.equal(s.players[0].equippedWeapon,'warrior_fire');assert.equal(s.players[1].armorLevel,1);assert.equal(s.players[1].maxHealth,165);}
     // Run real attacks in short deterministic encounters instead of a ten-minute soak.
     const target=s.enemies.find(e=>e.enemyType==='boss') ?? s.enemies[0];
     s.enemies=[target];s.spawnClock=999;
@@ -59,11 +60,11 @@ try {
     assert.ok(room.run!.summary.players.reduce((n,p)=>n+p.stats.totalDamage,0)>=30*round);
     if(round===1){
       for(const p of room.run!.summary.players)assert.equal(p.gold,100);
-      await pages[0].getByRole('button',{name:'Buy Honed longsword'}).click();
+      await pages[0].getByRole('button',{name:'Buy '+equipment[room.run!.summary.players[0].offers[0]].name}).click();
       await pages[1].getByRole('button',{name:'Buy Forged plate'}).click();
       await pages[0].waitForFunction(()=>document.querySelector('[data-testid="gold"]')?.textContent==='20 gold');
       await pages[1].waitForFunction(()=>document.querySelector('[data-testid="gold"]')?.textContent==='30 gold');
-      assert.equal(room.run!.summary.players[0].weaponLevel,1);assert.equal(room.run!.summary.players[1].armorLevel,1);
+      assert.equal(room.run!.summary.players[0].equippedWeapon,'warrior_fire');assert.equal(room.run!.summary.players[1].armorLevel,1);
       await pages[0].screenshot({path:'test-results/shop-round-1.png'});
       await pages[0].setViewportSize({width:640,height:950});
       await pages[0].screenshot({path:'test-results/campfire-narrow.png'});

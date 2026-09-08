@@ -17,7 +17,7 @@ for(const [kind,model] of Object.entries(manifest.models)) {
   for(const [name,part] of Object.entries(model.parts)) {
     const node=nodes.find(n=>n.extras?.part===name); assert.ok(node,`Missing ${kind}/${name}`);
     assert.ok(part.halfExtents.every(n=>n>0));
-    node.translation.forEach((v,i)=>assert.ok(Math.abs(v-part.position[i])<.0001,'Pivot matches physics manifest'));
+    (node.translation ?? [0,0,0]).forEach((v,i)=>assert.ok(Math.abs(v-part.position[i])<.0001,'Pivot matches physics manifest'));
     if(part.role==='weapon') assert.equal(part.parent,undefined,'Weapons have no death joint');
     if(part.parent){assert.ok(model.parts[part.parent]);assert.equal(part.anchor.length,3);}
   }

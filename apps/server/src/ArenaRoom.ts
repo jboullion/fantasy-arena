@@ -47,9 +47,9 @@ export class ArenaRoom extends Room {
       this.publishLobby(); this.broadcast('world', this.snapshot([]));
     });
     this.onMessage('buy', (client, item: unknown) => {
-      if (this.stage !== 'shop' || (item !== 'weapon' && item !== 'armor')) return;
+      if (this.stage !== 'shop' || typeof item !== 'string') return;
       const member = this.members.find(m => m.sessionId === client.sessionId); if (!member) return;
-      if (!this.run?.buy(member.actorId, item)) { client.send('notice', 'Cannot purchase: not enough gold or already at maximum rank.'); return; }
+      if (!this.run?.buy(member.actorId, item)) { client.send('notice', 'Cannot purchase: check your gold, current offers and equipment. Choose one weapon per visit.'); return; }
       member.ready = false; this.publishLobby();
     });
     this.onMessage('input', (client, data: unknown) => {
@@ -100,7 +100,7 @@ export class ArenaRoom extends Room {
   private publishLobby() { this.broadcast('lobby', this.lobby()); }
   private snapshot(events: WorldSnapshot['events']): WorldSnapshot {
     const s = this.simulation;
-    return { players: s.players, enemies: s.enemies, time: s.time, kills: s.kills, phase: s.phase, config: s.config, events, round: this.round };
+    return { players: s.players, enemies: s.enemies, projectiles: s.projectiles, time: s.time, kills: s.kills, phase: s.phase, config: s.config, events, round: this.round };
   }
   private update(milliseconds: number) {
     if (this.stage !== 'game' || !this.members.length) return;

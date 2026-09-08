@@ -1,11 +1,12 @@
-import { defaults, characters, enemyTypes, type EnemyType, type CharacterId, type Config } from '@arena/game-data';
+import { defaults, characters, enemyTypes, isRanged, characterWeapons, getWeapon, type WeaponId, type Element, type EnemyType, type CharacterId, type Config } from '@arena/game-data';
 export type Input = { x: number; z: number };
-export type Actor = { id: number; x: number; z: number; hp: number; facing: number; flash: number; vx: number; vz: number; cooldown: number; windup: number; attackTargetId?: number; enemyType?: EnemyType; maxHealth?: number };
-export type CombatStats = { totalDamage: number; damageByWeapon: Record<string, number>; kills: number; damageTaken: number };
-export const emptyStats = (): CombatStats => ({ totalDamage: 0, damageByWeapon: { 'weapon.longsword': 0 }, kills: 0, damageTaken: 0 });
-export type Player = Actor & { name: string; character: CharacterId; maxHealth: number; swing: number; targetId: number | null; weaponLevel: number; armorLevel: number; stats: CombatStats };
-export type PlayerSetup = { id: number; name: string; character: CharacterId; weaponLevel?: number; armorLevel?: number; stats?: CombatStats };
-export type GameEvent = { type: 'swing' | 'hit' | 'kill' | 'hurt' | 'complete'; x: number; z: number; facing: number; amount?: number; targetId?: number; enemyType?: EnemyType };
+export type Actor = { id: number; x: number; z: number; hp: number; facing: number; flash: number; vx: number; vz: number; cooldown: number; windup: number; attackTargetId?: number; enemyType?: EnemyType; maxHealth?: number; burn?: { remaining: number; nextTick: number; ownerId: number; weaponId: string }; poisoned?: number; chilled?: number };
+export type CombatStats = { totalDamage: number; damageByWeapon: Record<string, number>; damageByType?: Record<string,number>; kills: number; damageTaken: number };
+export const emptyStats = (character: CharacterId = 'warrior'): CombatStats => ({ totalDamage: 0, damageByWeapon: { [characterWeapons[character]]: 0 }, damageByType:{physical:0}, kills: 0, damageTaken: 0 });
+export type Player = Actor & { name: string; character: CharacterId; equippedWeapon?: WeaponId; maxHealth: number; swing: number; targetId: number | null; weaponLevel: number; armorLevel: number; stats: CombatStats };
+export type PlayerSetup = { id: number; name: string; character: CharacterId; equippedWeapon?: WeaponId; weaponLevel?: number; armorLevel?: number; stats?: CombatStats };
+export type Projectile = { id: number; ownerId: number; targetId: number; kind: 'arrow' | 'magic_missile'; x: number; z: number; facing: number; speed: number; damage: number; life: number; weaponId?: string; element?: Element };
+export type GameEvent = { type: 'swing' | 'shoot' | 'hit' | 'kill' | 'hurt' | 'complete'; x: number; z: number; facing: number; amount?: number; targetId?: number; enemyType?: EnemyType; element?: Element; knockbackFacing?: number };
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 export class Simulation {
   config: Config;
@@ -17,6 +18,7 @@ export class Simulation {
   get swing() { return this.player.swing; }
   set swing(value: number) { this.player.swing = value; }
   enemies: Actor[] = [];
+  projectiles: Projectile[] = [];
   events: GameEvent[] = [];
   phase: 'playing' | 'paused' | 'dead' | 'complete' = 'playing';
   time = 0; kills = 0; spawnClock = 0; spawnScale = 1; seed = 42; nextId = 1; assisted = false;
@@ -27,10 +29,10 @@ export class Simulation {
     this.roundNumber = roundNumber;
     this.players = roster.map((entry, index) => {
       const maxHealth = (entry.character === 'warrior' ? this.config.playerHealth : characters[entry.character].health) + (entry.armorLevel ?? 0) * 25;
-      return { ...entry, weaponLevel: entry.weaponLevel ?? 0, armorLevel: entry.armorLevel ?? 0, stats: entry.stats ? structuredClone(entry.stats) : emptyStats(), x: roster.length === 1 ? 0 : (index % 2 ? 1.5 : -1.5), z: roster.length === 1 ? 0 : (index < 2 ? -1.5 : 1.5), hp: maxHealth, maxHealth, facing: Math.PI, flash: 0, vx: 0, vz: 0, cooldown: 0, windup: 0, swing: 0, targetId: null };
+      return { ...entry, weaponLevel: entry.weaponLevel ?? 0, armorLevel: entry.armorLevel ?? 0, stats: entry.stats ? structuredClone(entry.stats) : emptyStats(entry.character), x: roster.length === 1 ? 0 : (index % 2 ? 1.5 : -1.5), z: roster.length === 1 ? 0 : (index < 2 ? -1.5 : 1.5), hp: maxHealth, maxHealth, facing: Math.PI, flash: 0, vx: 0, vz: 0, cooldown: 0, windup: 0, swing: 0, targetId: null };
     });
     this.localPlayerId = roster[0].id;
-    this.enemies = []; this.events = []; this.phase = 'playing'; this.time = this.kills = this.swing = this.spawnClock = 0; this.targetId = null; this.seed = 42; this.nextId = 1; this.assisted = false;
+    this.enemies = []; this.projectiles = []; this.events = []; this.phase = 'playing'; this.time = this.kills = this.swing = this.spawnClock = 0; this.targetId = null; this.seed = 42; this.nextId = 1; this.assisted = false;
     this.spawn(4);
     const introduced = (Object.keys(enemyTypes) as EnemyType[]).find(type => type !== 'goblin' && type !== 'boss' && enemyTypes[type].unlock === roundNumber);
     if (introduced) this.spawn(1, introduced);
@@ -54,7 +56,7 @@ export class Simulation {
     }
   }
   bound(a: Actor) { const radius = a.enemyType ? .5 * enemyTypes[a.enemyType].scale : .5; a.x = clamp(a.x, -this.config.arenaWidth / 2 + radius, this.config.arenaWidth / 2 - radius); a.z = clamp(a.z, -this.config.arenaLength / 2 + radius, this.config.arenaLength / 2 - radius); }
-  killAll() { this.assisted = true; for (const e of this.enemies) this.emit('kill', e); this.kills += this.enemies.length; this.enemies = []; }
+  killAll() { this.assisted = true; for (const e of this.enemies) this.emit('kill', e, undefined, e.facing); this.kills += this.enemies.length; this.enemies = []; }
   step(dt: number, input: Input) {
     this.stepMultiplayer(dt, new Map([[this.player.id, input]]));
   }
@@ -62,18 +64,24 @@ export class Simulation {
     if (this.phase !== 'playing') return;
     const c = this.config;
     this.time = Math.min(c.duration, this.time + dt);
-    if (this.time >= c.duration - 1e-8 && !this.enemies.some(e => e.enemyType === 'boss')) { this.time = c.duration; this.phase = 'complete'; this.emit('complete', this.player); return; }
+    if (this.time >= c.duration - 1e-8 && !this.enemies.some(e => e.enemyType === 'boss')) { this.time = c.duration; this.projectiles = []; this.phase = 'complete'; this.emit('complete', this.player); return; }
     this.spawnClock -= dt;
-    if (this.spawnClock <= 0 && this.time < c.duration) { this.spawn(1 + Math.floor(this.time / 15)); this.spawnClock = c.spawnInterval / (this.spawnScale * (1 + this.time / 40)); }
+    if (this.spawnClock <= 0 && this.time < c.duration) { this.spawn(1 + Math.floor(this.time / 30)); this.spawnClock = c.spawnInterval / (this.spawnScale * (1 + this.time / 60)); }
+    this.stepStatuses(dt);
     for (const p of this.players) if (p.hp > 0) this.stepPlayer(dt, p, inputs.get(p.id) ?? { x: 0, z: 0 });
+    this.stepProjectiles(dt);
     this.stepEnemies(dt);
-    if (this.players.every(p => p.hp <= 0)) this.phase = 'dead';
+    if (this.players.every(p => p.hp <= 0)) { this.phase = 'dead'; this.projectiles = []; }
   }
   private stepPlayer(dt: number, p: Player, input: Input) {
     const c = this.config;
     const stats = characters[p.character];
     const speed = p.character === 'warrior' ? c.playerSpeed : stats.speed;
-    const damage = (p.character === 'warrior' ? c.swordDamage : stats.damage) + p.weaponLevel * 10;
+    const ranged = isRanged(p.character);
+    const weapon=getWeapon(p.equippedWeapon);
+    const baseDamage = p.character === 'guardian' ? stats.damage : c.swordDamage;
+    const damage = baseDamage;
+    const range = ranged ? c.projectileRange : c.swordRange;
     const cooldown = p.character === 'warrior' ? c.swordCooldown : stats.cooldown;
     const length = Math.max(1, Math.hypot(input.x, input.z));
     p.vx = input.x / length * speed; p.vz = input.z / length * speed;
@@ -88,22 +96,92 @@ export class Simulation {
     if (p.windup > 0) {
       p.windup -= dt;
       if (p.windup <= 0) {
+        if (ranged) {
+          if (nearest && distance <= range) {
+            p.facing = Math.atan2(nearest.x - p.x, nearest.z - p.z);
+            const kind = p.character === 'archer' ? 'arrow' : 'magic_missile';
+            const speed = kind === 'arrow' ? c.arrowSpeed : c.missileSpeed;
+            this.projectiles.push({ id: this.nextId++, ownerId: p.id, targetId: nearest.id, kind, x: p.x, z: p.z, facing: p.facing, speed, damage, life: range / speed + .5, weaponId:p.equippedWeapon??characterWeapons[p.character],element:weapon?.element });
+            p.swing = .23; this.emit('shoot', p, undefined, p.facing);
+          }
+          return;
+        }
         p.swing = .23; this.emit('swing', p, undefined, p.facing);
         for (const e of this.enemies) {
           const dx = e.x - p.x, dz = e.z - p.z, d = Math.hypot(dx, dz);
           const angle = Math.atan2(Math.sin(Math.atan2(dx, dz) - p.facing), Math.cos(Math.atan2(dx, dz) - p.facing));
           if (d <= c.swordRange && Math.abs(angle) <= c.swordArc * Math.PI / 360) {
-            const dealt = Math.min(e.hp, damage);
-            p.stats.totalDamage += dealt; p.stats.damageByWeapon['weapon.longsword'] = (p.stats.damageByWeapon['weapon.longsword'] ?? 0) + dealt;
-            e.hp -= damage; e.flash = .18; e.windup = 0; e.cooldown = Math.max(e.cooldown, .35);
-            e.vx = dx / Math.max(d, .01) * c.knockback; e.vz = dz / Math.max(d, .01) * c.knockback;
-            this.emit('hit', e, damage, p.facing);
-            if (e.hp <= 0) { this.kills++; p.stats.kills++; this.emit('kill', e, undefined, p.facing); }
+            this.elementalHit(p, e, damage, p.facing, p.equippedWeapon, weapon?.element);
           }
         }
         this.enemies = this.enemies.filter(e => e.hp > 0);
       }
-    } else if (nearest && distance <= c.swordRange && p.cooldown <= 0 && p.swing <= 0) { p.windup = c.swordWindup; p.cooldown = cooldown; }
+    } else if (nearest && distance <= range && p.cooldown <= 0 && p.swing <= 0) { p.windup = c.swordWindup; p.cooldown = cooldown; }
+  }
+  private damageEnemy(p: Player, e: Actor, damage: number, facing: number, weaponId?: string, element?: Element, elementalDamage=0, impact=true) {
+    if (e.hp <= 0) return;
+    const dealt = Math.min(e.hp, damage), weapon = weaponId ?? characterWeapons[p.character];
+    p.stats.totalDamage += dealt; p.stats.damageByWeapon[weapon] = (p.stats.damageByWeapon[weapon] ?? 0) + dealt;
+    const byType=p.stats.damageByType??={};
+    const elemental=element ? Math.min(dealt,elementalDamage*dealt/Math.max(damage,.01)) : 0;
+    byType.physical=(byType.physical??0)+dealt-elemental;
+    if(element)byType[element]=(byType[element]??0)+elemental;
+    e.hp -= damage; e.flash = .18;
+    if (impact) { e.windup = 0; e.cooldown = Math.max(e.cooldown, .35); }
+    const dx=e.x-p.x, dz=e.z-p.z, distance=Math.max(.01,Math.hypot(dx,dz));
+    if (impact) { e.vx = dx/distance * this.config.knockback; e.vz = dz/distance * this.config.knockback; }
+    this.emit('hit', e, damage, facing);
+    if(element)this.events[this.events.length-1].element=element;
+    if (e.hp <= 0) { this.kills++; p.stats.kills++; this.emit('kill', e, undefined, e.facing); this.events[this.events.length-1].knockbackFacing = impact ? (Math.hypot(dx,dz)>.01 ? Math.atan2(dx,dz) : facing) : e.facing+Math.PI; }
+  }
+  private elementalHit(p: Player, e: Actor, damage: number, facing: number, weaponId?: string, element?: Element) {
+    if (e.hp <= 0) return;
+    this.damageEnemy(p,e,damage,facing,weaponId,element);
+    const c=this.config;
+    if (element==='lightning') {
+      // Splash excludes the direct target and cannot trigger another elemental hit.
+      for (const nearby of this.enemies) if (nearby!==e && nearby.hp>0 && Math.hypot(nearby.x-e.x,nearby.z-e.z)<=c.lightningRadius)
+        this.damageEnemy(p,nearby,c.lightningDamage,facing,weaponId,'lightning',c.lightningDamage,false);
+    }
+    if (e.hp<=0) return;
+    if (element==='fire') e.burn={remaining:c.fireDuration,nextTick:e.burn?.nextTick??Math.max(.01,c.fireTickInterval),ownerId:p.id,weaponId:weaponId??characterWeapons[p.character]};
+    if (element==='poison') e.poisoned=c.poisonDuration;
+    if (element==='ice') e.chilled=c.iceDuration;
+  }
+  private stepStatuses(dt: number) {
+    for (const e of this.enemies) {
+      e.poisoned=Math.max(0,(e.poisoned??0)-dt);
+      e.chilled=Math.max(0,(e.chilled??0)-dt);
+      const burn=e.burn;
+      if (!burn) continue;
+      burn.nextTick-=Math.min(dt,burn.remaining);burn.remaining-=dt;
+      const owner=this.players.find(p=>p.id===burn.ownerId);
+      while (burn.nextTick<=1e-8 && e.hp>0 && owner) {
+        this.damageEnemy(owner,e,this.config.fireTickDamage,e.facing,burn.weaponId,'fire',this.config.fireTickDamage,false);
+        burn.nextTick+=Math.max(.01,this.config.fireTickInterval);
+      }
+      if (burn.remaining<=1e-8 || !owner) delete e.burn;
+    }
+    this.enemies=this.enemies.filter(e=>e.hp>0);
+  }
+  private stepProjectiles(dt: number) {
+    this.projectiles = this.projectiles.filter(shot => {
+      const owner = this.players.find(p => p.id === shot.ownerId);
+      const target = this.enemies.find(e => e.id === shot.targetId && e.hp > 0);
+      shot.life -= dt;
+      if (!owner || !target || shot.life <= 0) return false;
+      // Guided shots keep their original target; another player's kill never retargets a shot.
+      shot.facing = Math.atan2(target.x - shot.x, target.z - shot.z);
+      const distance = Math.hypot(target.x - shot.x, target.z - shot.z);
+      if (distance <= shot.speed * dt + .3) {
+        this.elementalHit(owner, target, shot.damage, shot.facing, shot.weaponId, shot.element);
+        return false;
+      }
+      shot.x += Math.sin(shot.facing) * shot.speed * dt;
+      shot.z += Math.cos(shot.facing) * shot.speed * dt;
+      return true;
+    });
+    this.enemies = this.enemies.filter(e => e.hp > 0);
   }
   private stepEnemies(dt: number) {
     const c = this.config;
@@ -121,13 +199,14 @@ export class Simulation {
         if (e.windup <= 0) {
           if (d <= contactRange + .25 && p.flash <= 0) {
             const baseDamage = e.enemyType === 'goblin' || !e.enemyType ? c.enemyDamage : definition.damage;
-            const damage = baseDamage <= 0 ? 0 : Math.max(1, baseDamage - p.armorLevel * 2);
+            const damage = baseDamage <= 0 ? 0 : Math.max(1, baseDamage * ((e.poisoned??0)>0 ? c.poisonDamageMultiplier : 1) - p.armorLevel * 2);
             p.stats.damageTaken += Math.min(p.hp, damage); p.hp = Math.max(0, p.hp - damage); p.flash = .35; this.emit('hurt', p);
           }
           e.cooldown = c.contactCooldown;
         }
       } else if (d < contactRange && e.cooldown <= 0) { e.windup = c.contactWindup; e.attackTargetId = p.id; }
-      const speed = e.windup > 0 || d < contactRange - .3 ? 0 : e.enemyType === 'goblin' || !e.enemyType ? c.enemySpeed : definition.speed;
+      const baseSpeed = e.windup > 0 || d < contactRange - .3 ? 0 : e.enemyType === 'goblin' || !e.enemyType ? c.enemySpeed : definition.speed;
+      const speed=baseSpeed*((e.chilled??0)>0 ? c.iceSpeedMultiplier : 1);
       e.x += (dx / Math.max(.01, d) * speed + e.vx) * dt; e.z += (dz / Math.max(.01, d) * speed + e.vz) * dt;
       e.vx *= Math.exp(-10 * dt); e.vz *= Math.exp(-10 * dt); this.bound(e);
     }

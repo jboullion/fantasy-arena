@@ -5,9 +5,11 @@ import * as THREE from 'three';
 import { advance, effects, sim, useUI } from './runtime';
 import { DamageNumbers } from './DamageNumbers';
 import { PlayerLabels } from './PlayerLabels';
-import { PlayerModel, ModelHorde, EnemyRagdolls, VictoryRagdolls, PhysicsInspection } from './CharacterModels';
+import { elements } from '@arena/game-data';
+import { PlayerModel, Projectiles, ModelHorde, EnemyRagdolls, VictoryRagdolls, PhysicsInspection } from './CharacterModels';
 
 const dummy = new THREE.Object3D();
+const hitColor = new THREE.Color();
 function HitParticles() {
   const mesh = useRef<THREE.InstancedMesh>(null!);
   useFrame(() => {
@@ -15,11 +17,11 @@ function HitParticles() {
     for (const e of effects) if (e.type === 'hit' && e.life > .65) for (let n = 0; n < 5 && index < 640; n++) {
       const age = .9 - e.life, angle = n * 2.4 + e.id;
       dummy.position.set(e.x + Math.cos(angle) * age * 5, .8 + Math.sin(age * 10) * .6, e.z + Math.sin(angle) * age * 5);
-      dummy.rotation.set(angle, age * 15, 0); dummy.scale.setScalar((.25 - age) * .45); dummy.updateMatrix(); mesh.current.setMatrixAt(index++, dummy.matrix);
+      dummy.rotation.set(angle, age * 15, 0); dummy.scale.setScalar((.25 - age) * .45); dummy.updateMatrix(); mesh.current.setMatrixAt(index, dummy.matrix);mesh.current.setColorAt(index++,hitColor.set(e.element?elements[e.element].color:'#ffe4a1'));
     }
-    mesh.current.count = index; mesh.current.instanceMatrix.needsUpdate = true;
+    mesh.current.count = index; mesh.current.instanceMatrix.needsUpdate = true;if(mesh.current.instanceColor)mesh.current.instanceColor.needsUpdate=true;
   });
-  return <instancedMesh ref={mesh} args={[undefined, undefined, 640]} frustumCulled={false}><octahedronGeometry args={[1]}/><meshBasicMaterial color="#ffe4a1"/></instancedMesh>;
+  return <instancedMesh ref={mesh} args={[undefined, undefined, 640]} frustumCulled={false}><octahedronGeometry args={[1]}/><meshBasicMaterial toneMapped={false}/></instancedMesh>;
 }
 function Environment() {
   const c = sim.config;
@@ -59,7 +61,7 @@ export function Scene() {
     <CameraAndLoop/><Environment/><HitParticles/><DamageNumbers/><PlayerLabels/>
     <Suspense fallback={null}><Physics paused={sim.phase === 'paused'} timeStep={1 / 60} gravity={[0,-14,0]}>
       <RigidBody type="fixed" colliders={false}><CuboidCollider args={[50,.1,50]} position={[0,-.12,0]}/></RigidBody>
-      {sim.players.map(p=><PlayerModel key={p.id} playerId={p.id}/>)}<ModelHorde/><EnemyRagdolls/><VictoryRagdolls/><PhysicsInspection/>
+      {sim.players.map(p=><PlayerModel key={p.id} playerId={p.id}/>)}<ModelHorde/><Projectiles/><EnemyRagdolls/><VictoryRagdolls/><PhysicsInspection/>
     </Physics></Suspense>
   </Canvas>;
 }

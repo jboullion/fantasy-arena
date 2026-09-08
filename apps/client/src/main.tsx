@@ -66,13 +66,13 @@ function App() {
     <div className={`damage-vignette ${sim.player.flash > 0 ? 'active' : ''}`}/>
     <header className="hud">
       <div className="identity"><span className="crest">⚔</span><div><div className="eyebrow">FANTASY ARENA <span>0.1</span></div><h1>The forest trial</h1></div></div>
-      <div className="health-label"><span>{networked ? sim.player.name : 'WARRIOR'}</span><span>{sim.player.hp} <small>/ {sim.player.maxHealth}</small></span></div>
-      <div className="health" role="progressbar" aria-label="Warrior health" aria-valuemin={0} aria-valuemax={sim.player.maxHealth} aria-valuenow={sim.player.hp}><i style={{ width: `${sim.player.hp / sim.player.maxHealth * 100}%` }}/></div>
+      <div className="health-label"><span>{networked ? sim.player.name : characters[sim.player.character].name.toUpperCase()}</span><span>{sim.player.hp} <small>/ {sim.player.maxHealth}</small></span></div>
+      <div className="health" role="progressbar" aria-label="Player health" aria-valuemin={0} aria-valuemax={sim.player.maxHealth} aria-valuenow={sim.player.hp}><i style={{ width: `${sim.player.hp / sim.player.maxHealth * 100}%` }}/></div>
       <div className="stats"><div><strong>{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}</strong><span>TO SURVIVE</span></div><div><strong>{String(sim.kills).padStart(2, '0')}</strong><span>ENEMIES SLAIN</span></div></div>
     </header>
     {networked && <aside className="team-hud" aria-label="Team">{sim.players.map(p => <div key={p.id}><span className={`team-dot ${p.character}`}/><span>{p.name}{p.id === sim.localPlayerId ? ' (you)' : ''}<small>{characters[p.character].name}</small></span><b>{p.hp > 0 ? `${p.hp} HP` : 'Fallen'}</b></div>)}</aside>}
     <nav className="tools" aria-label="Game controls"><button onClick={pause}>{networked ? 'Menu' : sim.phase === 'paused' ? 'Resume' : 'Pause'} <kbd>Esc</kbd></button><button aria-pressed={ui.muted} onClick={() => { audio.muted = !audio.muted; useUI.setState({ muted: audio.muted }); }}>{ui.muted ? 'Sound off' : 'Sound on'}</button>{!networked && <button aria-expanded={ui.debug} onClick={() => useUI.setState({ debug: !ui.debug })}>Tune <kbd>F2</kbd></button>}</nav>
-    <div className="controls"><span className="key-cluster">{ui.device === 'gamepad' ? 'LEFT STICK' : 'W A S D'}</span><span>Move <b>·</b> Your sword attacks automatically</span></div>
+    <div className="controls"><span className="key-cluster">{ui.device === 'gamepad' ? 'LEFT STICK' : 'W A S D'}</span><span>Move <b>·</b> Your weapon attacks automatically</span></div>
     <div className="slice-label">{networked ? `ROUND ${net.lobby?.round} / 10 · ${sim.players.length} ADVENTURERS · TEAM KILLS` : 'CORE COMBAT SANDBOX'} {sim.assisted && <span>· ASSISTED RUN</span>}</div>
     {networked && <div className="round-banner">Round {net.lobby?.round} / 10{sim.enemies.some(e => e.enemyType === 'boss') && <span> · Defeat the Forest Warlord{seconds === 0 ? ' to finish the round' : ''}</span>}</div>}
     {sim.enemies.filter(e => e.enemyType === 'boss').map(boss => <div className="boss-health" key={boss.id}><span>FOREST WARLORD · {boss.hp} / {boss.maxHealth}</span><div><i style={{width:`${boss.hp / (boss.maxHealth || 1) * 100}%`}}/></div></div>)}

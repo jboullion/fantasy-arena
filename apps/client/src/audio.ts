@@ -5,7 +5,7 @@ export class AudioSystem {
   play(events: GameEvent[]) {
     const ctx = this.context; if (!ctx || this.muted || ctx.state !== 'running') return;
     for (const e of events.slice(0, 8)) {
-      const frequencies = { swing: 180, hit: 95, kill: 260, hurt: 60, complete: 660 };
+      const frequencies = { swing: 180, shoot: 480, hit: 95, kill: 260, hurt: 60, complete: 660 };
       const oscillator = ctx.createOscillator(), gain = ctx.createGain(), t = ctx.currentTime;
       oscillator.type = e.type === 'complete' ? 'sine' : 'triangle';
       oscillator.frequency.setValueAtTime(frequencies[e.type], t);
