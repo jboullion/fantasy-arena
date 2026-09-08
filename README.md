@@ -1,6 +1,6 @@
 # Fantasy Arena — Prototype Slice 0.1
 
-A playable 1–4 player, ten-round survival prototype based on the design documents in `docs/`. Gather a party, choose a Human Warrior, Dwarf Guardian, Archer or Mage, and survive the forest clearing while improving your equipment between rounds.
+A playable 1–4 player, six-round survival prototype based on the design documents in `docs/`. Gather a party, choose a Human Warrior, Dwarf Guardian, Archer or Mage, and survive the forest clearing while improving your equipment between rounds.
 
 ## Run
 
@@ -18,7 +18,7 @@ Open http://127.0.0.1:5173. `npm run dev` starts both Vite (5173) and the Colyse
 3. Everyone clicks **Ready up**. The host clicks **Launch Level 1**.
 4. Move with WASD or a gamepad. All players fight the same enemies; damage, deaths, kills, and time come from the server.
 5. Clear each 60-second round to earn **100 gold per player**. Shop, ready up, and let the host start the next round. Boss rounds also require killing the boss.
-6. Clear round 10 to win. The same shop/report screen displays victory with purchasing disabled.
+6. Clear round 6 to win. The same shop/report screen displays victory with purchasing disabled.
 
 One to four players may launch, and character choices can repeat. Changing a name or character clears that player's ready state. A full lobby or an ongoing run rejects new joins. Purchases clear that player's ready state in the shop. After victory or defeat, the host can bring everyone back to the lobby. If the host leaves, the next remaining player becomes host.
 
@@ -62,7 +62,7 @@ The client runs on Netlify and the single Node/Colyseus server runs on Render Fr
 
 ## Rounds, equipment and statistics
 
-Rounds 3, 6 and 9 introduce Ember Runners, Stone Brutes and Frost Revenants, respectively; earlier types remain in the spawn pool. Rounds 5 and 10 add a Forest Warlord boss with party-scaled health. The arena and 60-second spawn-pressure pattern stay the same. When the timer expires with a boss alive, new spawning stops and the party must finish the boss.
+Rounds 2, 4 and 6 introduce Ember Runners, Stone Brutes and Frost Revenants, respectively; earlier types remain in the spawn pool. Round 3 adds a Forest Warlord mini boss (390 solo health); round 6 adds the major boss (975 solo health), alongside the newly introduced Frost Revenants. Both bosses scale health with party size. The arena and 60-second spawn-pressure pattern stay the same. When the timer expires with a boss alive, new spawning stops and the party must finish the boss.
 
 Between clears, all remaining party members receive 100 gold, including fallen teammates. Each new round revives and fully heals the party. Equipment lasts for the current run only:
 
