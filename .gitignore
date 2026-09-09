@@ -6,3 +6,13 @@ test-results/
 # Local Netlify folder
 .netlify
 *.blend1
+
+# Unity generated caches and builds
+unity/[Ll]ibrary/
+unity/[Tt]emp/
+unity/[Oo]bj/
+unity/[Ll]ogs/
+unity/[Uu]serSettings/
+unity/[Bb]uilds/
+unity/*.csproj
+unity/*.sln*
