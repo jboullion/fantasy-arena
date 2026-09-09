@@ -4,9 +4,9 @@ Open this folder as a Unity project with **6000.6.0f1**. This is the first migra
 
 ## First slice
 
-One 60-second warrior/goblin survival round, offline simulation, LAN host/guest adapter, imported character assets, and a shared-camera local-player prototype. This is not yet combat parity: windups, separation, knockback, terrain obstacles, ranged classes, progression, equipment, audio and ragdolls remain subsequent work. The initial HUD uses uGUI Text while the final menu pass will use TextMeshPro and the existing artwork.
+The gameplay migration now includes warrior, guardian, archer and mage; melee windups, ranged projectiles, elemental weapons, armor, enemy variants and bosses, seeded terrain collision, and six-round shop/retry progression. Imported character parts animate procedurally. Offline simulation, LAN host/guest and optional shared-camera local play are available. The HUD is provisional uGUI; audio, ragdolls and final menu artwork remain pending. See `../docs/Unity Gameplay — Verification.md` for tested coverage and limitations.
 
-Open `Assets/FantasyArena/Scenes/Foundation.unity` and press Play. If the scene has not been generated, use **Fantasy Arena > Create foundation scene**. Choose offline, local co-op, or LAN host/join. Use WASD or a gamepad left stick; attacks happen automatically. Escape pauses offline games. Launch the round after players have joined.
+Open `Assets/FantasyArena/Scenes/Foundation.unity` and press Play. If the scene has not been generated, use **Fantasy Arena > Create foundation scene**. Choose offline, local co-op, or LAN host/join. Choose a class in the lobby; online players must ready up before the host launches. Use WASD or a gamepad left stick; attacks happen automatically. Escape pauses offline games. Between rounds buy a weapon or armor, then launch the next round. Defeat allows retrying that round with retained equipment. Statistics are available during the run; the latest 20 run reports are saved to Unity's persistent data folder as `run-reports.v1.json` (no saved-history browser yet).
 
 In the local lobby, Start on the first gamepad assigns player one; Start on another adds a player. For keyboard player one plus a controller guest, hold Space while the guest presses Start. Menu-focus polishing and a visible device-assignment screen are pending. `ArenaSession.EnableCouch` hides the mode and disables extra local joins. No mixed local/online parties yet.
 
@@ -17,18 +17,21 @@ LAN uses UDP port 7777. Direct LAN addresses are not Steam invitations and do no
 From the repository root in PowerShell:
 
 ```powershell
-& 'C:\Program Files\Unity\Hub\Editor\6000.6.0f1\Editor\Unity.exe' -batchmode -nographics -quit -projectPath "$PWD\unity" -executeMethod FantasyArena.Editor.ArenaBuild.ValidateAndBuild -logFile "$PWD\test-results\unity-build.log"
+npx.cmd tsx scripts/unity-parity.ts
+powershell -File scripts/unity-build.ps1
 powershell -File scripts/unity-smoke.ps1 -Mode offline
 powershell -File scripts/unity-smoke.ps1 -Mode network
 powershell -File scripts/unity-smoke.ps1 -Mode local
 ```
 
-Close this project's editor before batch builds. Output: `Builds/Windows/FantasyArena.exe`. Smoke checks use explicitly enabled command-line automation and write reports under the repository's ignored `test-results` directory. A headless smoke pass does not establish visual quality, real controller behavior, physical two-PC LAN access, or cross-internet play.
+The build script validates a separate copy under `test-results/unity-validation`, so the source editor can stay open. Save editor changes first; leave Play mode while scripts update. Close the standalone game before replacing its executable. Output: `Builds/Windows/FantasyArena.exe`. Smoke checks use explicitly enabled command-line automation and write reports under the repository's ignored `test-results` directory without saving synthetic run reports. A headless smoke pass does not establish visual quality, real controller behavior, physical two-PC LAN access, or cross-internet play.
 
 ## Architecture and dependency decision
 
+The presentation pass adds procedural idle/celebration motion, cosmetic death ragdolls, combat sparks/trails/status flashes, and synthesized audio with a saved Sound toggle. See `../docs/Unity Presentation — Verification.md` for evidence and remaining polish; earlier milestone descriptions above predate this pass.
+
 - `Core/ArenaSimulation.cs`: plain C# state, fixed-step simulation and normalized inputs. No Unity types or networking dependencies.
-- `Runtime/ArenaSession.cs`: Netcode for GameObjects custom-message adapter. Peers own inputs, host owns state; connection IDs map to internal actor IDs. Protocol 1 rejects mismatched connection payloads. The initial JSON snapshots are for the small spike, not the final 200-enemy bandwidth target.
+- `Runtime/ArenaSession.cs`: Netcode for GameObjects custom-message adapter. Peers own inputs, host owns state; connection IDs map to internal actor IDs. Protocol 2 rejects mismatched connection payloads; both peers must update from the foundation build. JSON snapshots have not been benchmarked at the 200-enemy target.
 - `Runtime/ArenaView.cs`: character rendering, interpolation, device polling and party camera.
 - `Editor/ArenaBuild.cs`: repeatable scene generation, core checks, asset checks and Windows build.
 

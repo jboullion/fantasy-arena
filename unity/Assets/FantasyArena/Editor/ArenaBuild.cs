@@ -42,7 +42,7 @@ namespace FantasyArena.Editor
         }
         public static void ValidateAndBuild()
         {
-            ValidateCore(); CreateScene();
+            ValidateCore(); ArenaParity.Validate(); CreateScene();
             var warrior = Resources.Load<GameObject>("Models/warrior"); var goblin = Resources.Load<GameObject>("Models/goblin");
             if (warrior == null || goblin == null) throw new Exception("Model import failed");
             Directory.CreateDirectory("Builds/Windows");
@@ -58,6 +58,7 @@ namespace FantasyArena.Editor
             s.SetInput(0, float.NaN, 0); s.Tick();
             if (float.IsNaN(s.State.players[0].x)) throw new Exception("Non-finite input accepted");
             var a = new ArenaSimulation(); var b = new ArenaSimulation(); a.AddPlayer(0); b.AddPlayer(0); a.Start(); b.Start();
+            a.State.runId = b.State.runId = "determinism-check";
             for(int i=0;i<3600;i++) { a.Tick(); b.Tick(); }
             if(JsonUtility.ToJson(a.State)!=JsonUtility.ToJson(b.State)) throw new Exception("Seeded scenario diverged");
             if(a.State.stage=="playing") throw new Exception("Round failed to end");

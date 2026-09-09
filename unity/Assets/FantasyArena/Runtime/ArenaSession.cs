@@ -20,6 +20,8 @@ namespace FantasyArena
         public bool Paused;
         public bool EnableCouch = true;
         public bool IsOnline => Mode == "Host" || Mode == "Guest";
+        public bool SaveReports = true;
+        string archivedKey = "";
         NetworkManager manager;
         World received = new World();
         readonly Dictionary<ulong, int> owners = new Dictionary<ulong, int>();
@@ -39,9 +41,38 @@ namespace FantasyArena
             if (Mode == "Local" && EnableCouch && World.stage == "lobby") Simulation.AddPlayer(World.players.Count);
         }
         public void Launch()
-        { if (Authority) { Simulation.Start(); Paused = false; } }
+        {
+            if (!Authority) return;
+            if (IsOnline && (World.stage=="lobby"||World.stage=="shop") && World.players.Exists(p=>!p.ready)) {Notice="Everyone must ready up before launching.";return;}
+            Simulation.Start(); Paused = false;
+        }
+        public void Command(string action, string value, int playerId = -1)
+        {
+            int id = playerId < 0 ? LocalId : playerId;
+            if (Authority) ApplyCommand(id, action, value);
+            else if (Mode == "Guest" && manager != null && manager.IsConnectedClient)
+            {
+                using var writer = new FastBufferWriter(256, Allocator.Temp);
+                writer.WriteValueSafe(action); writer.WriteValueSafe(value);
+                manager.CustomMessagingManager.SendNamedMessage("command", NetworkManager.ServerClientId, writer);
+            }
+        }
+        void ApplyCommand(int id, string action, string value)
+        {
+            if(action=="ready"&&(World.stage=="lobby"||World.stage=="shop"))
+            {var player=World.players.Find(p=>p.id==id);if(player!=null&&bool.TryParse(value,out bool ready))player.ready=ready;return;}
+            bool ok = action == "class" ? Simulation.ChooseClass(id, value) : action == "buy" && Simulation.Buy(id, value);
+            if (!ok && id == LocalId) Notice = "Action unavailable: check stage, gold and current offers.";
+        }
+        void CommandMessage(ulong sender, FastBufferReader reader)
+        {
+            if (!Authority || !owners.TryGetValue(sender, out int id) || reader.Length > 256) return;
+            reader.ReadValueSafe(out string action); reader.ReadValueSafe(out string value);
+            ApplyCommand(id, action, value);
+        }
         public void Connect(bool host, string address)
         {
+            if (manager != null) { Leave(); Notice = "Previous session cleared. Choose Host or Join again."; return; }
             Leave(); Mode = host ? "Host" : "Guest"; closing = false; nextId = 1;
             Simulation = new ArenaSimulation(); received = new World(); LocalId = host ? 0 : -1;
             var go = new GameObject("LAN session");
@@ -49,10 +80,10 @@ namespace FantasyArena
             transport.SetConnectionData(address, 7777, host ? "0.0.0.0" : null);
             manager = go.AddComponent<NetworkManager>();
             manager.NetworkConfig = new NetworkConfig { NetworkTransport = transport, EnableSceneManagement = false, ConnectionApproval = true };
-            manager.NetworkConfig.ConnectionData = System.Text.Encoding.UTF8.GetBytes("fantasy-arena:1");
+            manager.NetworkConfig.ConnectionData = System.Text.Encoding.UTF8.GetBytes("fantasy-arena:2");
             manager.ConnectionApprovalCallback = (request, response) =>
             {
-                bool valid = System.Text.Encoding.UTF8.GetString(request.Payload) == "fantasy-arena:1";
+                bool valid = System.Text.Encoding.UTF8.GetString(request.Payload) == "fantasy-arena:2";
                 response.Approved = valid && Simulation.State.stage == "lobby" && Simulation.State.players.Count < 4;
                 response.CreatePlayerObject = false; response.Pending = false;
                 response.Reason = valid ? "The lobby is full or the round has started." : "Incompatible game version.";
@@ -64,6 +95,7 @@ namespace FantasyArena
             manager.CustomMessagingManager.RegisterNamedMessageHandler("input", InputMessage);
             manager.CustomMessagingManager.RegisterNamedMessageHandler("world", WorldMessage);
             manager.CustomMessagingManager.RegisterNamedMessageHandler("identity", IdentityMessage);
+            manager.CustomMessagingManager.RegisterNamedMessageHandler("command", CommandMessage);
             Notice = host ? "LAN host • port 7777. Wait for friends, then launch." : "Connecting to LAN host...";
         }
         void Connected(ulong client)
@@ -86,7 +118,7 @@ namespace FantasyArena
         {
             if (Mode != "Guest" || sender != NetworkManager.ServerClientId) return;
             reader.ReadValueSafe(out string json); var state = JsonUtility.FromJson<World>(json);
-            if (state != null && state.protocol == 1) received = state;
+            if (state != null && state.protocol == 2) { received = state; Archive(); }
         }
         void Disconnected(ulong client)
         {
@@ -115,16 +147,26 @@ namespace FantasyArena
                 foreach (var pair in inputTimes) if (Time.realtimeSinceStartupAsDouble - pair.Value > .3) Simulation.SetInput(pair.Key, 0, 0);
                 Simulation.Tick();
             }
+            Archive();
             snapshotTimer += Time.unscaledDeltaTime;
             if (Mode == "Host" && manager != null && snapshotTimer >= .05f)
             {
                 snapshotTimer = 0;
                 string json = JsonUtility.ToJson(World);
-                using var writer = new FastBufferWriter(65536, Allocator.Temp);
+                using var writer = new FastBufferWriter(System.Text.Encoding.UTF8.GetByteCount(json) * 2 + 64, Allocator.Temp);
                 writer.WriteValueSafe(json);
                 foreach (ulong client in manager.ConnectedClientsIds)
                     if (client != NetworkManager.ServerClientId) manager.CustomMessagingManager.SendNamedMessage("world", client, writer, NetworkDelivery.ReliableFragmentedSequenced);
             }
+        }
+        void Archive()
+        {
+            if (!SaveReports || World.revision == 0 || World.runId == "") return;
+            string key = World.runId + ":" + World.revision;
+            if (key == archivedKey) return;
+            archivedKey = key;
+            try { ArenaArchive.Save(World); }
+            catch (Exception error) { Notice = "Could not save run report: " + error.Message; Debug.LogWarning(Notice); }
         }
         public void Leave()
         {

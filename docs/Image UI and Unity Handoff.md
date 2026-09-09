@@ -36,3 +36,13 @@ Run `npm run build` and `node tests/menu-art.mjs` with the dev client on port 51
 Secondary patina buttons cover shop purchases, readiness, stats, history and export actions. Brass remains the main start/retry/return action; Leave party also uses the secondary image. All button labels remain live text.
 
 All HTML buttons now default to the secondary patina sprite, including lobby join/copy/ready/leave, HUD controls, debug controls and preview navigation. Primary buttons retain brass and character choices retain leather cards.
+
+## Unity implementation — 2026-09-08
+
+The Unity HUD now loads these three textures from `unity/Assets/FantasyArena/Resources/UI`. `ArenaUiImport` applies the sprite borders and import settings above. `ArenaHud` uses sliced leather panels, brass primary actions and patina secondary actions across the existing menu, class setup, HUD, shop and results flow. Text remains live uGUI text using the bundled Unity font; Cinzel/Inter and TextMeshPro conversion are still pending.
+
+The panel anchors right on desktop, moves below the world in portrait, respects the safe area and scrolls long content. `ArenaUiFocus` outlines focused buttons and scrolls them into view for keyboard/controller navigation. The active arena remains behind the UI; restoring tavern/campfire scenes is separate work. No new portraits or icons were generated in this pass.
+
+Build with `powershell -File scripts/unity-build.ps1`, which uses a separate validation copy while the source editor stays open. Explicit preview arguments `-arenaSmoke offline -arenaUiPreview menu` (or `lobby`, `shop`, `victory`, `defeat`) with `-arenaScreenshot <absolute-path>` render a preview and exit. These preview states are illustrative and do not verify purchases or multiplayer behavior.
+
+Validation: Windows build passed (`ARENA_BUILD_PASS 197884959`) and all 26 combat comparisons passed. Running-build captures in `test-results/unity-ui-menu.png`, `unity-ui-lobby.png` and `unity-ui-shop.png` were inspected at 1440 × 900. Preview logs contained no exceptions. Portrait reflow and physical controller navigation are implemented but have not received hands-on validation in this pass.
